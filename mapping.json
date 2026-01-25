@@ -1,0 +1,167 @@
+{
+  "strict": {
+    "text-font-family": "TajawalMedium",
+    "text-heading-1-font-size": 28,
+    "text-heading-1-font-weight": "600",
+    "text-heading-1-font-family": "TajawalExtraBold",
+    "text-heading-2-font-size": 24,
+    "text-heading-2-font-weight": "600",
+    "text-heading-2-font-family": "TajawalExtraBold",
+    "text-heading-3-font-size": 20,
+    "text-heading-3-font-weight": "600",
+    "text-heading-3-font-family": "TajawalExtraBold",
+    "text-subtitle-1-font-size": 16,
+    "text-subtitle-1-font-family": "TajawalMedium",
+    "text-subtitle-2-font-size": 14,
+    "text-subtitle-2-font-family": "TajawalMedium",
+    "text-paragraph-1-font-size": 12,
+    "text-paragraph-2-font-size": 10,
+    "size-medium": 44,
+    "border-radius": 8
+  },
+  "components": {
+    "Divider": {
+      "appearances": {
+        "default": {
+          "mapping": {
+            "backgroundColor": "color-gray"
+          }
+        }
+      }
+    },
+    "Button": {
+      "appearances": {
+        "outline": {
+          "variantGroups": {
+            "status": {
+              "basic": {
+                "borderColor": "color-outline-variant",
+                "backgroundColor": "color-basic-100"
+              },
+              "primary": {
+                "backgroundColor": "color-basic-100"
+              }
+            }
+          }
+        },
+        "filled": {
+          "variantGroups": {
+            "status": {
+              "primary": {
+                "state": {
+                  "disabled": {
+                    "borderColor": "color-primary-25",
+                    "backgroundColor": "color-primary-25"
+                  }
+                }
+              }
+            },
+            "size": {
+              "medium": {
+                "paddingHorizontal": 16,
+                "paddingVertical": 10,
+                "textFontSize": 16
+              }
+            }
+          }
+        }
+      }
+    },
+    "Input": {
+      "appearances": {
+        "default": {
+          "mapping": {
+            "paddingHorizontal": 16,
+            "textMarginHorizontal": 0,
+            "textFontFamily": "TajawalMedium"
+          },
+          "variantGroups": {
+            "status": {
+              "basic": {
+                "borderColor": "color-gray",
+                "state": {
+                  "focused": {
+                    "iconTintColor": "color-black"
+                  }
+                }
+              },
+              "primary": {
+                "borderColor": "color-gray",
+                "backgroundColor": "background-basic-color-1"
+              }
+            },
+            "size": {
+              "medium": {
+                "paddingVertical": 12,
+                "textFontSize": 16
+              }
+            }
+          }
+        }
+      }
+    },
+    "OtpInput": {
+      "meta": {
+        "parameters": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "borderRadius": {
+            "type": "number"
+          },
+          "borderWidth": {
+            "type": "number"
+          },
+          "borderColor": {
+            "type": "string"
+          },
+          "backgroundColor": {
+            "type": "string"
+          }
+        },
+        "variantGroups": {},
+        "states": {
+          "hover": {
+            "default": false,
+            "priority": 0,
+            "scope": "all"
+          },
+          "disabled": {
+            "default": false,
+            "priority": 1,
+            "scope": "all"
+          },
+          "focused": {
+            "default": false,
+            "priority": 2,
+            "scope": "all"
+          }
+        },
+        "appearances": {
+          "default": {
+            "default": true
+          }
+        }
+      },
+      "appearances": {
+        "default": {
+          "mapping": {
+            "width": 48,
+            "height": 48,
+            "borderRadius": 8,
+            "borderWidth": 1,
+            "borderColor": "color-gray",
+            "state": {
+              "focused": {
+                "borderColor": "color-primary-focus"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

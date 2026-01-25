@@ -1,0 +1,36 @@
+{
+  "cli": {
+    "version": ">= 16.28.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "credentialsSource": "local",
+      "distribution": "internal",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "distribution": "store"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "preview": {
+      "ios": {
+        "ascAppId": "6758158270",
+        "appleId": "eng.alagha@gmail.com",
+        "appleTeamId": "N6YVSNR5B2"
+      }
+    },
+    "production": {}
+  }
+}
