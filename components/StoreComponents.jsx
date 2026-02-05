@@ -14,7 +14,7 @@ export const ProductsList = ({ store, items }) => {
     return (
       <Pressable
         onPress={() =>
-          router.navigate({
+          router.push({
             pathname: "/product",
             params: {
               storeId: store.id,
@@ -52,7 +52,7 @@ export const ProductsList = ({ store, items }) => {
 
   const renderItem = useCallback(
     ({ item }) => <ItemsList item={item}></ItemsList>,
-    []
+    [],
   );
 
   return (
@@ -80,7 +80,10 @@ const styles = StyleSheet.create({
   },
   productDetails: { gap: 8 },
   productNameAndPrice: { gap: 2 },
-  productNameAndPriceText: { color: theme["color-black"] },
+  productNameAndPriceText: {
+    color: theme["text-heading-color"],
+    textAlign: "left",
+  },
   productDescription: { color: theme["text-body-color"] },
   productImageContainer: {
     width: 72,

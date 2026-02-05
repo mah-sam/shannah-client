@@ -24,6 +24,9 @@ export const AssetIconsPack = {
       require("./assets/images/icons/filter-funnel.png"),
     ),
     heart: IconProvider(require("./assets/images/icons/heart.png")),
+    heartFilled: IconProvider(
+      require("./assets/images/icons/heart-filled.png"),
+    ),
     star: IconProvider(require("./assets/images/icons/star.png")),
     home: IconProvider(require("./assets/images/icons/home.png")),
     magnifyingGlass: IconProvider(
@@ -52,5 +55,28 @@ export const AssetIconsPack = {
     ),
     eye: IconProvider(require("./assets/images/icons/eye.png")),
     eyeOff: IconProvider(require("./assets/images/icons/eye-off.png")),
+    locationSolid: IconProvider(
+      require("./assets/images/icons/location-solid.png"),
+    ),
+    favoriteOutline: IconProvider(
+      require("./assets/images/icons/favorite-outline.png"),
+    ),
+    historyRounded: IconProvider(
+      require("./assets/images/icons/history-rounded.png"),
+    ),
+    creditCard: IconProvider(require("./assets/images/icons/credit-card.png")),
+    bell: IconProvider(require("./assets/images/icons/bell.png")),
+    helpCircle: IconProvider(require("./assets/images/icons/help-circle.png")),
+    globe: IconProvider(require("./assets/images/icons/globe.png")),
+    logOut: IconProvider(require("./assets/images/icons/log-out.png")),
+    homeOutline: IconProvider(
+      require("./assets/images/icons/home-outline.png"),
+    ),
+    office: IconProvider(require("./assets/images/icons/office.png")),
+    partnerHeartOutline: IconProvider(
+      require("./assets/images/icons/partner-heart-outline.png"),
+    ),
+    edit: IconProvider(require("./assets/images/icons/edit.png")),
+    share: IconProvider(require("./assets/images/icons/share.png")),
   },
 };

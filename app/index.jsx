@@ -119,6 +119,7 @@ export default function Intro() {
             </Text>
           </View>
           <View style={styles.bottomActionBar}>
+            {renderIndicators()}
             <Button
               status="primary"
               onPress={handleNext}
@@ -132,7 +133,6 @@ export default function Intro() {
                 </Text>
               </View>
             </Button>
-            {renderIndicators()}
           </View>
         </Layout>
       )}

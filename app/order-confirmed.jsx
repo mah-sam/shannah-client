@@ -48,104 +48,100 @@ export default function OrderConfirmed() {
             </Text>
           </View>
 
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              // style={{ maxHeight: "100%" }}
-              contentContainerStyle={
-                {
-                  // paddingBottom: 128 - insets.bottom,
-                }
-              }
-            >
-              <View style={styles.orderSummaryContainer}>
-                <Text category="s1" style={styles.titleText}>
-                  ملخص الطلب
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+            }}
+          >
+            <View style={styles.orderSummaryContainer}>
+              <Text category="s1" style={styles.titleText}>
+                ملخص الطلب
+              </Text>
+              <View style={styles.orderSummaryRow}>
+                <Text category="s2" style={{ flex: 1, textAlign: "left" }}>
+                  رقم الطلب
                 </Text>
-                <View style={styles.orderSummaryRow}>
-                  <Text category="s2" style={{ flex: 1 }}>
-                    رقم الطلب
-                  </Text>
+                <Text category="s2" style={styles.orderSummaryText}>
+                  {order?.id}
+                </Text>
+              </View>
+              <View style={styles.orderSummaryRow}>
+                <Text category="s2" style={{ flex: 1, textAlign: "left" }}>
+                  اسم المتجر
+                </Text>
+                <Text category="s2" style={styles.orderSummaryText}>
+                  {order?.store?.name}
+                </Text>
+              </View>
+              <View style={styles.orderSummaryRow}>
+                <Text category="s2" style={{ flex: 1, textAlign: "left" }}>
+                  عنوان التسليم
+                </Text>
+                <Text category="s2" style={{ flex: 1 }}>
+                  {order?.address?.national_address}
+                </Text>
+              </View>
+              <View style={styles.orderSummaryRow}>
+                <Text category="s2">المبلغ الإجمالي</Text>
+                <View style={styles.priceContainer}>
                   <Text category="s2" style={styles.orderSummaryText}>
-                    {order?.id}
+                    {order?.total_amount}
                   </Text>
+                  <SarIcon style={styles.sarIcon}></SarIcon>
                 </View>
-                <View style={styles.orderSummaryRow}>
-                  <Text category="s2" style={{ flex: 1 }}>
-                    اسم المتجر
+              </View>
+            </View>
+
+            <View style={styles.orderItemsContainer}>
+              <View style={styles.orderItemsHeader}>
+                <Text category="s2">تفاصيل الطلب</Text>
+                <ChevronDownIcon
+                  style={styles.chevronDownIcon}
+                ></ChevronDownIcon>
+              </View>
+              {order?.items?.map((item) => (
+                <View key={item.product_id} style={styles.orderItemsRow}>
+                  <Text>
+                    {item.name + " "}
+                    <Text category="p2">{item.qty}x</Text>
                   </Text>
-                  <Text category="s2" style={styles.orderSummaryText}>
-                    {order?.store?.name}
-                  </Text>
-                </View>
-                <View style={styles.orderSummaryRow}>
-                  <Text category="s2" style={{ flex: 1 }}>
-                    عنوان التسليم
-                  </Text>
-                  <Text category="s2" style={{ flex: 1 }}>
-                    المبنى رقم ١٢، حي الياسمين، طريق الملك عبد العزيز، الرياض
-                  </Text>
-                </View>
-                <View style={styles.orderSummaryRow}>
-                  <Text category="s2">المبلغ الإجمالي</Text>
                   <View style={styles.priceContainer}>
-                    <Text category="s2" style={styles.orderSummaryText}>
-                      {order?.total_amount}
+                    <Text>
+                      {item.qty * item.unit_price +
+                        item.options?.reduce((prevVal, currVal) => {
+                          return (
+                            prevVal +
+                            currVal.reduce((p, c) => {
+                              return p + parseFloat(c.valuePrice);
+                            }, 0)
+                          );
+                        }, 0)}
                     </Text>
                     <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
-              </View>
-
-              <View style={styles.orderItemsContainer}>
-                <View style={styles.orderItemsHeader}>
-                  <Text category="s2">تفاصيل الطلب</Text>
-                  <ChevronDownIcon
-                    style={styles.chevronDownIcon}
-                  ></ChevronDownIcon>
-                </View>
-                {order?.items?.map((item) => (
-                  <View key={item.product_id} style={styles.orderItemsRow}>
-                    <Text>
-                      {item.name + " "}
-                      <Text category="p2">{item.qty}x</Text>
-                    </Text>
-                    <View style={styles.priceContainer}>
-                      <Text>
-                        {item.qty * item.unit_price +
-                          item.options?.reduce((prevVal, currVal) => {
-                            return (
-                              prevVal +
-                              currVal.reduce((p, c) => {
-                                return p + parseFloat(c.valuePrice);
-                              }, 0)
-                            );
-                          }, 0)}
-                      </Text>
-                      <SarIcon style={styles.sarIcon}></SarIcon>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+              ))}
+            </View>
+          </ScrollView>
 
           <BottomActionBar>
             <Button>
-              <View>
+              {(evaProps) => (
                 <Text category="s1" status="control">
                   تتبع الطلب
                 </Text>
-              </View>
+              )}
             </Button>
             <Button
               appearance="outline"
-              onPress={() => router.navigate("/(tabs)")}
+              onPress={() => router.replace("/(tabs)")}
             >
-              <View>
+              {(evaProps) => (
                 <Text category="s1" status="primary">
                   استكشف المزيد
                 </Text>
-              </View>
+              )}
             </Button>
           </BottomActionBar>
         </Layout>
@@ -157,7 +153,7 @@ export default function OrderConfirmed() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+
     gap: 16,
   },
   image: {
@@ -168,15 +164,18 @@ const styles = StyleSheet.create({
   titleContainer: {
     gap: 4,
     alignItems: "center",
+    paddingHorizontal: 16,
   },
   titleText: {
     color: theme["text-heading-color"],
+    textAlign: "left",
   },
   etaText: {
     color: theme["text-body-color"],
   },
   orderSummaryContainer: {
     gap: 8,
+    paddingHorizontal: 16,
   },
   orderSummaryRow: {
     flexDirection: "row",
@@ -199,6 +198,7 @@ const styles = StyleSheet.create({
   orderItemsContainer: {
     flex: 1,
     gap: 7,
+    paddingHorizontal: 16,
   },
   orderItemsHeader: {
     flexDirection: "row",

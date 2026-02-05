@@ -88,7 +88,7 @@ export default function SignInEmail() {
             <Input
               status="primary"
               inputMode="email"
-              label={() => (
+              label={(evaProps) => (
                 <Text style={styles.labelText}>عنوان البريد الإلكتروني</Text>
               )}
               textStyle={styles.inputText}
@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
   labelText: {
     color: theme["color-black"],
     lineHeight: 18,
+    textAlign: "left",
   },
   eyeIcon: {
     width: 24,

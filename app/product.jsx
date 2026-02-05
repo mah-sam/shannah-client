@@ -10,42 +10,64 @@ import {
 } from "@ui-kitten/components";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ArrowRightIcon,
-  HeartIcon,
   MinusCircleIcon,
   PlusCircleIcon,
   SarIcon,
   StarIcon,
 } from "../components/Icons";
+import { AnimatedFavoriteButton } from "../components/ui/AnimatedFavoriteButton";
+import BottomActionBar from "../components/ui/BottomActionBar";
 import { useGlobal } from "../context/GlobalContext";
-import { getProduct, getStores } from "../services/shannahApi";
+import useAuth from "../hooks/useAuth";
+import useKeyboard from "../hooks/useKeyboard";
+import { getProduct, getStores, toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Product = () => {
+  const { signedIn } = useGlobal();
+  const { token } = useAuth();
   const { storeId, productId } = useLocalSearchParams();
   const [store, setStore] = useState({});
   const [product, setProduct] = useState({});
-  const [productDataLoaded, setProductDataLoaded] = useState({});
+  const [productDataLoaded, setProductDataLoaded] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [qty, setQty] = useState(1);
   const [requiredOptions, setRequiredOptions] = useState([]);
   const [options, setOptions] = useState({});
+  const [isFavorite, setIsFavorite] = useState(false);
   const { cartItems, setCartItems } = useGlobal();
+  const { keyboardOpen } = useKeyboard();
+
+  const handleToggleFavorite = async () => {
+    if (!token) return;
+    const result = await toggleFavorite(token, "product", productId);
+    setIsFavorite(result.favorited);
+  };
 
   useEffect(() => {
     (async () => {
-      const result = await getStores(storeId);
+      const result = await getStores(token, storeId);
       setStore(result.data);
     })();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     (async () => {
       const result = await getProduct(productId);
       setProduct(result.data);
+      setIsFavorite(result.data?.is_favorite || false);
       setProductDataLoaded(true);
     })();
   }, [store]);
@@ -126,6 +148,7 @@ const Product = () => {
       discountPrice: product.discount_price,
       options: options,
       optionsPrice: optionsPrice,
+      notes: specialInstructions,
     };
 
     const storeItems = cartItems[product.type]?.[store.id] ?? [];
@@ -162,29 +185,8 @@ const Product = () => {
       };
     }
 
-    // const storeIndex = cartItems[product.type].findIndex((item) =>
-    //   Object.keys(item).includes(String(store.id))
-    // );
-
-    // const storeProducts =
-    //   storeIndex === -1 ? [] : cartItems[product.type][storeIndex][store.id];
-
     await AsyncStorage.setItem("cart", JSON.stringify(updatedItems));
-    // setCartItems({ meal: [], banquet: [] });
     setCartItems(updatedItems);
-
-    // if (storeIndex === -1) {
-    //   existingItems[product.type].push({ [store.id]: [productData] });
-    //   await AsyncStorage.setItem("cart", JSON.stringify(existingItems));
-    //   setCartItems(existingItems);
-    // } else {
-    //   existingItems[product.type][storeIndex][store.id] = [
-    //     ...storeProducts,
-    //     productData,
-    //   ];
-    //   await AsyncStorage.setItem("cart", JSON.stringify(existingItems));
-    //   setCartItems(existingItems);
-    // }
 
     router.navigate("/(tabs)/cart");
   };
@@ -199,56 +201,80 @@ const Product = () => {
             paddingBottom: insets.bottom,
           }}
         >
-          {productDataLoaded ? (
-            <>
-              <View style={styles.productCover}>
-                <Image
-                  source={{
-                    uri: product.image,
-                  }}
-                  resizeMode="cover"
-                  style={styles.productImage}
-                ></Image>
-                <View style={styles.backButton}>
-                  <Pressable onPress={() => router.back()}>
-                    <ArrowRightIcon style={styles.arrowIcon}></ArrowRightIcon>
-                  </Pressable>
-                </View>
-                <View style={styles.favoriteButton}>
-                  <HeartIcon style={styles.heartIcon}></HeartIcon>
-                </View>
-              </View>
-              <View style={styles.productDetails}>
-                <View style={styles.productNameAndPrice}>
-                  <Text category="h2">{product.name}</Text>
-                  <View style={styles.productPriceContainer}>
-                    <Text category="h2">{product.price}</Text>
-                    <SarIcon style={styles.sarIconProduct}></SarIcon>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            enabled={keyboardOpen}
+          >
+            {productDataLoaded ? (
+              <>
+                <View style={styles.productCover}>
+                  <Image
+                    source={{
+                      uri: product.image,
+                    }}
+                    resizeMode="cover"
+                    style={styles.productImage}
+                  ></Image>
+                  <View style={styles.backButton}>
+                    <Pressable onPress={() => router.back()}>
+                      <ArrowRightIcon style={styles.arrowIcon}></ArrowRightIcon>
+                    </Pressable>
                   </View>
+                  {signedIn && (
+                    <AnimatedFavoriteButton
+                      isFavorite={isFavorite}
+                      onToggle={handleToggleFavorite}
+                      style={styles.favoriteButton}
+                      buttonStyle={styles.heartButtonContainer}
+                      iconStyle={
+                        isFavorite ? styles.heartFilledIcon : styles.heartIcon
+                      }
+                      backgroundColor="rgba(255, 255, 255, 0.9)"
+                    />
+                  )}
                 </View>
-                <View style={styles.productRatingContainer}>
-                  <StarIcon style={styles.starIcon}></StarIcon>
-                  <Text
-                    style={styles.productRatingText}
-                  >{`${product.rating} (${product.review_count})`}</Text>
+                <View style={styles.productDetails}>
+                  <View style={styles.productNameAndPrice}>
+                    <Text category="h2" style={styles.productNameAndPriceText}>
+                      {product.name}
+                    </Text>
+                    <View style={styles.productPriceContainer}>
+                      <Text
+                        category="h2"
+                        style={styles.productNameAndPriceText}
+                      >
+                        {product.price}
+                      </Text>
+                      <SarIcon style={styles.sarIconProduct}></SarIcon>
+                    </View>
+                  </View>
+                  <View style={styles.productRatingContainer}>
+                    <StarIcon style={styles.starIcon}></StarIcon>
+                    <Text
+                      style={styles.productRatingText}
+                    >{`${product.rating} (${product.review_count})`}</Text>
+                  </View>
+                  <Text category="s2" style={styles.productDescription}>
+                    {product.description}
+                  </Text>
                 </View>
-                <Text style={styles.productDescription}>
-                  {product.description}
-                </Text>
-              </View>
 
-              <View style={{ flex: 1, maxHeight: "100%" }}>
                 <ScrollView
-                  style={{ maxHeight: "100%" }}
-                  contentContainerStyle={{ paddingBottom: 128 - insets.bottom }}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{
+                    flexGrow: 1,
+                  }}
                 >
                   {product?.options?.map((option) => {
                     return (
                       <View key={option.id} style={styles.optionsContainer}>
-                        <View style={styles.optionTitle}>
+                        <View style={styles.optionTitleContainer}>
                           <View>
-                            <Text category="s1">{option.name}</Text>
-                            <Text>
+                            <Text category="s1" style={styles.optionTitle}>
+                              {option.name}
+                            </Text>
+                            <Text style={styles.optionSubtitle}>
                               {option.type === "single"
                                 ? "اختر واحداً"
                                 : "قام عملاء آخرون أيضاً بطلب هذه المنتجات معاً"}
@@ -265,7 +291,9 @@ const Product = () => {
                         {option.values.map((value) => {
                           return (
                             <View key={value.id} style={styles.optionValues}>
-                              <Text>{value.name}</Text>
+                              <Text style={styles.optionText}>
+                                {value.name}
+                              </Text>
                               {option.type === "single" ? (
                                 <Radio
                                   style={styles.ltr}
@@ -285,7 +313,10 @@ const Product = () => {
                                 >
                                   {(evaProps) => (
                                     <View style={styles.optionPrice}>
-                                      <Text style={styles.optionPriceText}>
+                                      <Text
+                                        category="s1"
+                                        style={styles.optionText}
+                                      >
                                         {value.price}
                                       </Text>
                                       <SarIcon
@@ -311,7 +342,7 @@ const Product = () => {
                                 >
                                   {(evaProps) => (
                                     <View style={styles.optionPrice}>
-                                      <Text style={styles.optionPriceText}>
+                                      <Text style={styles.optionText}>
                                         {value.price}
                                       </Text>
                                       <SarIcon
@@ -354,93 +385,74 @@ const Product = () => {
                         status="primary"
                         multiline={true}
                         style={{ borderRadius: 10 }}
-                      ></Input>
+                        textStyle={styles.specialInstructionsInputText}
+                        value={specialInstructions}
+                        onChangeText={(t) => setSpecialInstructions(t)}
+                      />
                     </View>
                   </View>
                 </ScrollView>
-              </View>
 
-              <View
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  bottom: 0,
-                  width: "100%",
-                  paddingHorizontal: 9,
-                  paddingTop: 16,
-                  paddingBottom: 20 + insets.bottom,
-                  boxShadow: "0px 0px 6px rgba(0, 0, 0, 0.15)",
-                  borderTopLeftRadius: 12,
-                  borderTopRightRadius: 12,
-                  backgroundColor: "#ffffff",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <Button
-                    style={{ flex: 1 }}
-                    disabled={!isEnabledAddButton()}
-                    onPress={() => onAddToCart()}
-                  >
-                    <View>
-                      <Text
-                        style={{
-                          fontFamily: "TajawalMedium",
-                          fontWeight: 500,
-                          fontSize: 16,
-                          // lineHeight: 24,
-                        }}
-                        status="control"
-                      >
-                        إضافة إلى السلة
-                      </Text>
-                    </View>
-                  </Button>
+                <BottomActionBar>
                   <View
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      height: 24,
-                      gap: 8,
+                      gap: 10,
                     }}
                   >
-                    <Pressable onPress={() => onIncrementQty()}>
-                      <PlusCircleIcon
-                        style={{ width: 20, height: 20 }}
-                      ></PlusCircleIcon>
-                    </Pressable>
-                    <Text category="s1">{qty}</Text>
-                    <Pressable
-                      onPress={() => onDecrementQty()}
-                      disabled={qty <= 1}
+                    <Button
+                      style={{ flex: 1 }}
+                      disabled={!isEnabledAddButton()}
+                      onPress={() => onAddToCart()}
                     >
-                      <MinusCircleIcon
-                        style={
-                          qty > 1
-                            ? styles.minusCircleIcon
-                            : {
-                                ...styles.minusCircleIcon,
-                                ...styles.minusButtonDisabled,
-                              }
-                        }
-                      ></MinusCircleIcon>
-                    </Pressable>
+                      {(evaProps) => (
+                        <Text category="s1" status="control">
+                          إضافة إلى السلة
+                        </Text>
+                      )}
+                    </Button>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        height: 24,
+                        gap: 8,
+                      }}
+                    >
+                      <Pressable onPress={() => onIncrementQty()}>
+                        <PlusCircleIcon
+                          style={styles.plusCircleIcon}
+                        ></PlusCircleIcon>
+                      </Pressable>
+                      <Text category="s1">{qty}</Text>
+                      <Pressable
+                        onPress={() => onDecrementQty()}
+                        disabled={qty <= 1}
+                      >
+                        <MinusCircleIcon
+                          style={
+                            qty > 1
+                              ? styles.minusCircleIcon
+                              : {
+                                  ...styles.minusCircleIcon,
+                                  ...styles.minusButtonDisabled,
+                                }
+                          }
+                        ></MinusCircleIcon>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
+                </BottomActionBar>
+              </>
+            ) : (
+              <View style={styles.spinnerContainer}>
+                <Spinner></Spinner>
               </View>
-            </>
-          ) : (
-            <View style={styles.spinnerContainer}>
-              <Spinner></Spinner>
-            </View>
-          )}
+            )}
+          </KeyboardAvoidingView>
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -482,6 +494,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heartIcon: { width: 24, height: 24 },
+  heartFilledIcon: {
+    width: 24,
+    height: 24,
+    tintColor: theme["color-primary-500"],
+  },
   productDetails: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -493,8 +510,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  productNameAndPriceText: {
+    color: theme["text-heading-color"],
+  },
   productPriceContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sarIconProduct: { width: 24, height: 24 },
+  sarIconProduct: {
+    width: 24,
+    height: 24,
+    tintColor: theme["text-heading-color"],
+  },
   productRatingContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -505,21 +529,21 @@ const styles = StyleSheet.create({
     height: 16,
   },
   productRatingText: {
-    fontFamily: "TajawalMedium",
-    fontSize: 12,
-    color: theme["color-black"],
+    color: theme["text-body-color"],
   },
-  productDescription: { fontSize: 14, color: theme["text-body-color"] },
+  productDescription: { textAlign: "left", color: theme["text-body-color"] },
   optionsContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
   },
-  optionTitle: {
+  optionTitleContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  optionTitle: { color: theme["text-heading-color"], textAlign: "left" },
+  optionSubtitle: { color: theme["text-body-color"], textAlign: "left" },
   optionRequiredBadge: {
     justifyContent: "center",
     alignItems: "center",
@@ -539,6 +563,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  optionText: {
+    color: theme["text-body-color"],
+  },
   ltr: {
     direction: "ltr",
   },
@@ -550,21 +577,34 @@ const styles = StyleSheet.create({
     marginRight: 8,
     direction: "rtl",
   },
-  optionPriceText: { fontSize: 16 },
-  sarIconOption: { width: 12, height: 12 },
+  sarIconOption: { width: 12, height: 12, tintColor: theme["text-body-color"] },
   specialInstructions: { paddingHorizontal: 16, paddingVertical: 8, gap: 12 },
   specialInstructionsTitle: { gap: 2 },
-  specialInstructionsText: {},
-  specialInstructionsSubText: {},
+  specialInstructionsText: {
+    color: theme["text-heading-color"],
+    textAlign: "left",
+  },
+  specialInstructionsSubText: {
+    color: theme["text-body-color"],
+    lineHeight: 14,
+    textAlign: "left",
+  },
   specialInstructionsPlaceholder: {
     position: "absolute",
-    top: 8,
+    top: 10,
     left: 20,
     fontSize: 16,
     color: theme["text-body-color"],
     zIndex: 1,
   },
-
+  specialInstructionsInputText: {
+    color: theme["color-black"],
+  },
+  plusCircleIcon: {
+    width: 20,
+    height: 20,
+    tintColor: "#1E1E1E",
+  },
   minusCircleIcon: {
     width: 20,
     height: 20,
@@ -572,6 +612,13 @@ const styles = StyleSheet.create({
   },
   minusButtonDisabled: {
     tintColor: theme["color-gray"],
+  },
+  heartButtonContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

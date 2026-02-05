@@ -1,77 +1,80 @@
-import { Button, Layout, Spinner, Text } from "@ui-kitten/components";
-import { router } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Button, Input, Layout, Text } from "@ui-kitten/components";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   BankNoteIcon,
+  EditIcon,
   ReceiptIcon,
   SarIcon,
   WalletIcon,
 } from "../components/Icons";
+import BottomActionBar from "../components/ui/BottomActionBar";
 import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
-import { useCurrentLocation } from "../hooks/useCurrentLocation";
 import { submitOrder } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Checkout = () => {
-  const { cartItems, setCartItems } = useGlobal();
-  const { subtotal } = useCart();
-  const { location, loading, error, refresh } = useCurrentLocation();
+  const { productType, storeId } = useLocalSearchParams();
+  const { signedIn, deliveryAddress } = useGlobal();
   const { token } = useAuth();
+  const { cartItems } = useGlobal();
+  const { subtotal, deleteStoreById } = useCart();
+  const [coords, setCoords] = useState(null);
+  const [notes, setNotes] = useState("");
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!deliveryAddress || !deliveryAddress.lat || !deliveryAddress.lng) {
+        router.push("/addresses/select");
+        return;
+      }
+      setCoords({
+        latitude: parseFloat(deliveryAddress.lat),
+        longitude: parseFloat(deliveryAddress.lng),
+      });
+    }, [deliveryAddress]),
+  );
 
   const onConfirmOrder = async () => {
+    if (!signedIn) {
+      router.replace("/sign-in");
+      return;
+    }
     const items = [];
-    const storeIds = Object.keys(cartItems["meal"]);
-    cartItems.meal[storeIds[0]].forEach((product) => {
+    cartItems[productType][storeId].forEach((product) => {
       items.push({
         product_id: product.id,
         qty: product.qty,
         unit_price: product.price,
         options: product.options,
+        notes: product.notes,
       });
     });
 
     const order = {
-      store_id: 1,
-      address_id: null,
-      delivery_method: "pickup",
-      subtotal: subtotal,
-      total_amount: subtotal,
+      store_id: storeId,
+      address_id: deliveryAddress.id,
+      delivery_method: "delivery",
+      subtotal: subtotal(productType, storeId),
+      total_amount: subtotal(productType, storeId),
       scheduled_at: null,
       phone: null,
-      notes: null,
+      notes: notes,
       items: items,
     };
 
     const result = await submitOrder(token, order);
-    router.navigate({
+    await deleteStoreById(productType, storeId);
+    router.replace({
       pathname: "/order-confirmed",
       params: { id: result.data.id },
     });
   };
-
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       const address = await reverseGeocodeAsync({
-  //         latitude: region.latitude,
-  //         longitude: region.longitude,
-  //       });
-
-  //       console.log(address);
-  //       if (!address || address.length === 0) {
-  //         return null;
-  //       }
-
-  //       return result[0];
-  //     } catch (error) {
-  //       console.log(error);
-  //     }
-  //   })();
-  // }, []);
 
   return (
     <SafeAreaInsetsContext.Consumer>
@@ -79,26 +82,18 @@ const Checkout = () => {
         <Layout
           style={{
             ...styles.container,
-            // paddingTop: insets.top,
             paddingBottom: insets.bottom,
           }}
         >
-          <View style={{ padding: 16, gap: 16 }}>
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: theme["color-gray"],
-                borderRadius: 12,
-              }}
-            >
-              {/* <View style={styles.tabBarContainer}> */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.contentContainer}
+          >
+            <View style={styles.card}>
               <View style={styles.tabBar}>
                 <Pressable
                   style={
-                    "meal" === "meal"
+                    productType === "meal"
                       ? [styles.tab, styles.tabActive]
                       : styles.tab
                   }
@@ -108,7 +103,7 @@ const Checkout = () => {
                 </Pressable>
                 <Pressable
                   style={
-                    "meal" === "banquet"
+                    productType === "banquet"
                       ? [styles.tab, styles.tabActive]
                       : styles.tab
                   }
@@ -117,97 +112,61 @@ const Checkout = () => {
                   <Text style={styles.tabText}>استلام</Text>
                 </Pressable>
               </View>
-              {/* </View> */}
-              <Text category="s1">عنوان التوصيل</Text>
-              <View
-                style={{
-                  height: 130,
-                  // backgroundColor: "#C38EE9",
-                  borderRadius: 16,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                {loading ? (
-                  <Spinner></Spinner>
-                ) : (
+
+              <View style={styles.changeAddressContainer}>
+                <Text category="s1">عنوان التسليم</Text>
+                <Pressable onPress={() => router.navigate("/addresses/select")}>
+                  <EditIcon style={styles.editIcon}></EditIcon>
+                </Pressable>
+              </View>
+              {coords !== null && (
+                <View style={styles.mapViewContainer}>
                   <MapView
                     style={StyleSheet.absoluteFill}
-                    // region={region}
-                    // onRegionChangeComplete={setRegion}
-                    initialRegion={{
-                      latitude: location?.latitude,
-                      longitude: location?.longitude,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
+                    region={{
+                      latitude: coords.latitude,
+                      longitude: coords.longitude,
+                      latitudeDelta: 0.015,
+                      longitudeDelta: 0.015,
                     }}
-                    showsUserLocation
                   >
-                    <Marker
-                      coordinate={{
-                        latitude: location?.latitude,
-                        longitude: location?.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                      }}
-                      draggable
-                      // onDragEnd={(e) => {
-                      //   setRegion({
-                      //     ...region,
-                      //     ...e.nativeEvent.coordinate,
-                      //   });
-                      // }}
-                    />
+                    <Marker coordinate={coords} tracksViewChanges={false} />
                   </MapView>
-                )}
-              </View>
+                </View>
+              )}
               <Text
                 category="s2"
-                style={{
-                  fontFamily: "Tajawal",
-                  color: theme["text-body-color"],
-                }}
+                style={styles.deliveryAddress}
+                numberOfLines={2}
               >
-                المبنى رقم ١٢، حي الياسمين، طريق الملك عبد العزيز، الرياض
+                {deliveryAddress.national_address}
               </Text>
+              <View>
+                {notes.length === 0 && (
+                  <Text style={styles.notesPlaceholder}>تعليمات التوصيل</Text>
+                )}
+                <Input
+                  status="primary"
+                  multiline={true}
+                  value={notes}
+                  onChangeText={(t) => setNotes(t)}
+                  textAlign="right"
+                />
+              </View>
             </View>
 
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: theme["color-gray"],
-                borderRadius: 12,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
+            <View style={styles.card}>
+              <View style={styles.paymentOptionContainer}>
                 <View style={{ gap: 4 }}>
-                  <View style={{ flexDirection: "row", gap: 4 }}>
-                    <WalletIcon style={{ width: 24, height: 24 }}></WalletIcon>
-                    <Text category="s1">طريفة الدفع</Text>
+                  <View style={styles.cardTitle}>
+                    <WalletIcon style={styles.walletIcon}></WalletIcon>
+                    <Text category="s1" style={styles.paymentOptionTitle}>
+                      طريفة الدفع
+                    </Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: "7",
-                    }}
-                  >
-                    <BankNoteIcon
-                      style={{ width: 34, height: 24 }}
-                    ></BankNoteIcon>
-                    <Text
-                      category="s2"
-                      style={{ color: theme["text-body-color"] }}
-                    >
+                  <View style={styles.paymentOption}>
+                    <BankNoteIcon style={styles.bankNoteIcon}></BankNoteIcon>
+                    <Text category="s2" style={styles.paymentOptionText}>
                       نقدي
                     </Text>
                   </View>
@@ -218,195 +177,58 @@ const Checkout = () => {
               </View>
             </View>
 
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: theme["color-gray"],
-                borderRadius: 12,
-              }}
-            >
+            <View style={styles.card}>
               <View style={{ gap: 4 }}>
-                <View style={{ flexDirection: "row", gap: 4 }}>
-                  <ReceiptIcon style={{ width: 24, height: 24 }}></ReceiptIcon>
+                <View style={styles.cardTitle}>
+                  <ReceiptIcon style={styles.receiptIcon}></ReceiptIcon>
                   <Text category="s1">ملخص الطلب</Text>
                 </View>
               </View>
               <View style={{ gap: 12 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text category="s1" style={{ fontFamily: "Tajawal" }}>
-                    المجموع الفرعي
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 2,
-                    }}
-                  >
-                    <Text
-                      category="s2"
-                      style={{
-                        fontFamily: "Tajawal",
-                        color: theme["color-black"],
-                      }}
-                    >
-                      {subtotal}
-                    </Text>
-                    <SarIcon
-                      style={{
-                        width: 16,
-                        height: 16,
-                        tintColor: theme["color-black"],
-                      }}
-                    ></SarIcon>
+                <View style={styles.summaryCardRow}>
+                  <Text category="s2">المجموع الفرعي</Text>
+                  <View style={styles.priceContainer}>
+                    <Text category="s2">{subtotal(productType, storeId)}</Text>
+                    <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text category="s1" style={{ fontFamily: "Tajawal" }}>
-                    التوصيل القياسي
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 2,
-                    }}
-                  >
-                    <Text
-                      category="s2"
-                      style={{
-                        fontFamily: "Tajawal",
-                        color: theme["color-black"],
-                      }}
-                    >
-                      0
-                    </Text>
-                    <SarIcon
-                      style={{
-                        width: 16,
-                        height: 16,
-                        tintColor: theme["color-black"],
-                      }}
-                    ></SarIcon>
+                <View style={styles.summaryCardRow}>
+                  <Text category="s2">رسوم التوصيل</Text>
+                  <View style={styles.priceContainer}>
+                    <Text category="s2">0</Text>
+                    <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text category="s1" style={{ fontFamily: "Tajawal" }}>
-                    الضريبة
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 2,
-                    }}
-                  >
-                    <Text
-                      category="s2"
-                      style={{
-                        fontFamily: "Tajawal",
-                        color: theme["color-black"],
-                      }}
-                    >
-                      0
-                    </Text>
-                    <SarIcon
-                      style={{
-                        width: 16,
-                        height: 16,
-                        tintColor: theme["color-black"],
-                      }}
-                    ></SarIcon>
+                <View style={styles.summaryCardRow}>
+                  <Text category="s2">الضريبة</Text>
+                  <View style={styles.priceContainer}>
+                    <Text category="s2">0</Text>
+                    <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text category="s1">الإجمالي</Text>
-                  <Text>(يشمل الرسوم والضرائب والخصومات)</Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 2,
-                  }}
-                >
-                  <Text category="s1" style={{ color: theme["color-black"] }}>
-                    {subtotal}
-                  </Text>
-                  <SarIcon
-                    style={{
-                      width: 16,
-                      height: 16,
-                      tintColor: theme["color-black"],
-                    }}
-                  ></SarIcon>
+              <View style={styles.summaryCardRow}>
+                <Text category="s1">
+                  الإجمالي <Text>(يشمل الرسوم والضرائب والخصومات)</Text>
+                </Text>
+
+                <View style={styles.priceContainer}>
+                  <Text category="s1">{subtotal(productType, storeId)}</Text>
+                  <SarIcon style={styles.sarIcon}></SarIcon>
                 </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              bottom: 0,
-              width: "100%",
-              paddingHorizontal: 16,
-              paddingTop: 16,
-              paddingBottom: 20 + insets.bottom,
-              boxShadow: "0px 0px 6px rgba(0, 0, 0, 0.15)",
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              backgroundColor: "#ffffff",
-              gap: 10,
-            }}
-          >
-            <Button style={{ flex: 1 }} onPress={() => onConfirmOrder()}>
-              <View>
-                <Text
-                  style={{
-                    fontFamily: "TajawalMedium",
-                    fontWeight: 500,
-                    fontSize: 16,
-                    // lineHeight: 24,
-                  }}
-                  status="control"
-                >
+          <BottomActionBar>
+            <Button onPress={() => onConfirmOrder()}>
+              {(evaProps) => (
+                <Text category="s1" status="control">
                   تأكيد الطلب
                 </Text>
-              </View>
+              )}
             </Button>
-          </View>
+          </BottomActionBar>
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -417,11 +239,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  tabBarContainer: {
-    justifyContent: "center",
+  contentContainer: { padding: 16, gap: 16, flexGrow: 1 },
+  card: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    height: 68,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme["color-gray"],
+    borderRadius: 12,
   },
   tabBar: {
     flexDirection: "row",
@@ -450,6 +275,66 @@ const styles = StyleSheet.create({
     fontFamily: "TajawalMedium",
     color: theme["color-black"],
     fontSize: 14,
+  },
+  changeAddressContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  editIcon: {
+    width: 20,
+    height: 20,
+    tintColor: theme["text-body-color"],
+  },
+  mapViewContainer: {
+    height: 130,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deliveryAddress: {
+    fontFamily: "Tajawal",
+    lineHeight: 20,
+    color: theme["text-body-color"],
+  },
+  notesPlaceholder: {
+    position: "absolute",
+    top: 10,
+    left: 20,
+    fontSize: 16,
+    color: theme["text-body-color"],
+    zIndex: 1,
+  },
+  paymentOptionContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cardTitle: { flexDirection: "row", gap: 4 },
+  walletIcon: { width: 24, height: 24, tintColor: theme["text-heading-color"] },
+  paymentOptionTitle: { color: theme["text-heading-color"] },
+  paymentOption: { flexDirection: "row", alignItems: "center", gap: 7 },
+  bankNoteIcon: { width: 34, height: 24 },
+  paymentOptionText: { color: theme["text-body-color"] },
+  receiptIcon: {
+    width: 24,
+    height: 24,
+    tintColor: theme["text-heading-color"],
+  },
+  summaryCardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  priceContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 2,
+  },
+  sarIcon: {
+    width: 16,
+    height: 16,
+    tintColor: theme["color-black"],
   },
 });
 

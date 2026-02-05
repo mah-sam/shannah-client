@@ -38,6 +38,10 @@ export const HeartIcon = (props) => (
   <Icon {...props} name="heart" pack="assets" />
 );
 
+export const HeartFilledIcon = (props) => (
+  <Icon {...props} name="heartFilled" pack="assets" />
+);
+
 export const StarIcon = (props) => (
   <Icon {...props} name="star" pack="assets" />
 );
@@ -79,9 +83,59 @@ export const MinusIcon = (props) => (
 export const WalletIcon = (props) => (
   <Icon {...props} name="wallet" pack="assets" />
 );
+
 export const ReceiptIcon = (props) => (
   <Icon {...props} name="receipt" pack="assets" />
 );
+
 export const BankNoteIcon = (props) => (
   <Icon {...props} name="bankNote" pack="assets" />
+);
+
+export const LocationSolid = (props) => (
+  <Icon {...props} name="locationSolid" pack="assets" />
+);
+
+export const FavoriteOutline = (props) => (
+  <Icon {...props} name="favoriteOutline" pack="assets" />
+);
+
+export const HistoryRounded = (props) => (
+  <Icon {...props} name="historyRounded" pack="assets" />
+);
+
+export const CreditCard = (props) => (
+  <Icon {...props} name="creditCard" pack="assets" />
+);
+
+export const Bell = (props) => <Icon {...props} name="bell" pack="assets" />;
+
+export const HelpCircle = (props) => (
+  <Icon {...props} name="helpCircle" pack="assets" />
+);
+
+export const Globe = (props) => <Icon {...props} name="globe" pack="assets" />;
+
+export const LogOut = (props) => (
+  <Icon {...props} name="logOut" pack="assets" />
+);
+
+export const HomeOutlineIcon = (props) => (
+  <Icon {...props} name="homeOutline" pack="assets" />
+);
+
+export const OfficeIcon = (props) => (
+  <Icon {...props} name="office" pack="assets" />
+);
+
+export const PartnerHeartOutlineIcon = (props) => (
+  <Icon {...props} name="partnerHeartOutline" pack="assets" />
+);
+
+export const EditIcon = (props) => (
+  <Icon {...props} name="edit" pack="assets" />
+);
+
+export const ShareIcon = (props) => (
+  <Icon {...props} name="share" pack="assets" />
 );

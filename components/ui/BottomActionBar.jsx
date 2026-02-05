@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const BottomActionBar = ({ children, style }) => {
   const insets = useSafeAreaInsets();
 
-  return <View style={[style, styles.actionBar]}>{children}</View>;
+  return <View style={[styles.actionBar, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({

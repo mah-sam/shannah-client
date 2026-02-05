@@ -40,6 +40,11 @@
               },
               "primary": {
                 "backgroundColor": "color-basic-100"
+              },
+              "danger": {
+                "borderColor": "color-red",
+                "backgroundColor": "color-basic-100",
+                "iconTintColor": "color-red"
               }
             }
           }
@@ -88,6 +93,16 @@
               "primary": {
                 "borderColor": "color-gray",
                 "backgroundColor": "background-basic-color-1"
+              },
+              "danger": {
+                "borderColor": "color-red",
+                "backgroundColor": "background-basic-color-1",
+                "captionColor": "color-red",
+                "state": {
+                  "focused": {
+                    "borderColor": "color-red"
+                  }
+                }
               }
             },
             "size": {
@@ -159,6 +174,15 @@
                 "borderColor": "color-primary-focus"
               }
             }
+          }
+        }
+      }
+    },
+    "Radio": {
+      "appearances": {
+        "default": {
+          "mapping": {
+            "iconTintColor": "color-basic-100"
           }
         }
       }

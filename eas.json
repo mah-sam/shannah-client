@@ -9,13 +9,13 @@
       "distribution": "internal"
     },
     "preview": {
-      "credentialsSource": "local",
       "distribution": "internal",
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
       "ios": {
+        "credentialsSource": "local",
         "distribution": "store"
       }
     },

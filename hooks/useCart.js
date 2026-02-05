@@ -1,20 +1,40 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback } from "react";
 import { useGlobal } from "../context/GlobalContext";
 
 export default function useCart() {
-  const { cartItems } = useGlobal();
+  const { cartItems, setCartItems } = useGlobal();
 
-  let subtotal = 0;
-  const storeIds = Object.keys(cartItems["meal"]);
-  [storeIds[0]].forEach((storeId) => {
-    const productTotal = cartItems["meal"][storeId].reduce(
-      (prevVal, currVal) => {
-        return prevVal + currVal.qty * currVal.price + currVal.optionsPrice;
-      },
-      0,
-    );
+  const calcSubtotal = useCallback(
+    (productType, storeId) => {
+      return (cartItems[productType][storeId] ?? []).reduce(
+        (prevVal, currVal) => {
+          return prevVal + currVal.qty * currVal.price + currVal.optionsPrice;
+        },
+        0,
+      );
+    },
+    [cartItems],
+  );
 
-    subtotal += productTotal;
-  });
+  const deleteStoreById = useCallback(
+    async (productType, storeId) => {
+      const existingStoreIds = Object.keys(cartItems[productType] ?? {});
+      const updatedStores = {};
 
-  return { subtotal };
+      existingStoreIds.forEach((existingStoreId) => {
+        if (existingStoreId != storeId) {
+          updatedStores[existingStoreId] =
+            cartItems[productType][existingStoreId];
+        }
+      });
+
+      const newCart = { ...cartItems, [productType]: updatedStores };
+      await AsyncStorage.setItem("cart", JSON.stringify(newCart));
+      setCartItems(newCart);
+    },
+    [cartItems, setCartItems],
+  );
+
+  return { subtotal: calcSubtotal, deleteStoreById };
 }

@@ -7,7 +7,7 @@ import {
 } from "@ui-kitten/components";
 import { Tabs } from "expo-router";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
-import HomeScreen from "../app/(tabs)/index";
+import { useGlobal } from "../context/GlobalContext";
 import * as theme from "../theme.json";
 
 const { Navigator, Screen } = createBottomTabNavigator();
@@ -35,6 +35,18 @@ const userIcon = (props) => (
 );
 
 const BottomTabBar = ({ navigation, state }) => {
+  const { signedIn } = useGlobal();
+
+  const tabs = [
+    { title: "الرئيسية", route: "index", icon: homeIcon },
+    { title: "بحث", route: "search", icon: magnifyingGlassIcon },
+    { title: "سلة التسوق", route: "cart", icon: shoppingBagIcon },
+  ];
+
+  if (signedIn) {
+    tabs.push({ title: "حسابي", route: "profile", icon: userIcon });
+  }
+
   return (
     <SafeAreaInsetsContext.Consumer>
       {(insets) => (
@@ -54,25 +66,30 @@ const BottomTabBar = ({ navigation, state }) => {
             paddingBottom: 16 + insets.bottom,
           }}
         >
-          <BottomNavigationTab
-            title={(evaProps) => (
-              <Text
-                {...evaProps}
-                style={{
-                  fontFamily: "TajawalBold",
-                  fontSize: 10,
-                  color:
-                    state.routeNames[state.index] === "index"
-                      ? theme["color-primary-500"]
-                      : "#6C7175",
-                }}
-              >
-                الرئيسية
-              </Text>
-            )}
-            icon={homeIcon}
-          />
-          <BottomNavigationTab
+          {tabs.map((tab, index) => {
+            return (
+              <BottomNavigationTab
+                key={index}
+                title={(evaProps) => (
+                  <Text
+                    {...evaProps}
+                    style={{
+                      fontFamily: "TajawalBold",
+                      fontSize: 10,
+                      color:
+                        state.routeNames[state.index] === tab.route
+                          ? theme["color-primary-500"]
+                          : "#6C7175",
+                    }}
+                  >
+                    {tab.title}
+                  </Text>
+                )}
+                icon={tab.icon}
+              />
+            );
+          })}
+          {/* <BottomNavigationTab
             title={(evaProps) => (
               <Text
                 {...evaProps}
@@ -108,53 +125,64 @@ const BottomTabBar = ({ navigation, state }) => {
             )}
             icon={shoppingBagIcon({ tintColor: "#6C7175" })}
           />
-          <BottomNavigationTab
-            title={(evaProps) => (
-              <Text
-                {...evaProps}
-                style={{
-                  fontFamily: "TajawalBold",
-                  fontSize: 10,
-                  color:
-                    state.routeNames[state.index] === "profile"
-                      ? theme["color-primary-500"]
-                      : "#6C7175",
-                }}
-              >
-                حسابي
-              </Text>
-            )}
-            icon={userIcon({ tintColor: "#6C7175" })}
-          />
+          {signedIn && (
+            <BottomNavigationTab
+              title={(evaProps) => (
+                <Text
+                  {...evaProps}
+                  style={{
+                    fontFamily: "TajawalBold",
+                    fontSize: 10,
+                    color:
+                      state.routeNames[state.index] === "profile"
+                        ? theme["color-primary-500"]
+                        : "#6C7175",
+                  }}
+                >
+                  حسابي
+                </Text>
+              )}
+              icon={userIcon({ tintColor: "#6C7175" })}
+            />
+          )} */}
         </BottomNavigation>
       )}
     </SafeAreaInsetsContext.Consumer>
   );
 };
 
-const TabNavigator = () => (
-  <Navigator tabBar={(props) => <BottomTabBar {...props} />}>
-    <Screen
-      name="Users"
-      component={HomeScreen}
-      options={{ headerShown: false }}
-    />
-    <Screen name="Orders" component={HomeScreen} />
-  </Navigator>
-);
+export const AppNavigator = () => {
+  const { signedIn } = useGlobal();
 
-export const AppNavigator = () => (
-  <Tabs tabBar={(props) => <BottomTabBar {...props} />}>
-    <Tabs.Screen name="index" options={{ headerShown: false }} />
-    <Tabs.Screen name="search" options={{ headerShown: false }} />
-    <Tabs.Screen
-      name="cart"
-      options={{
+  const tabs = [
+    { name: "index", options: { headerShown: false } },
+    {
+      name: "search",
+      options: {
+        title: "بحث",
+        headerTitleStyle: { fontFamily: "TajawalBold" },
+        headerBackVisible: true,
+      },
+    },
+    {
+      name: "cart",
+      options: {
         title: "سلة التسوق",
         headerTitleStyle: { fontFamily: "TajawalBold" },
         headerBackVisible: true,
-      }}
-    />
-    <Tabs.Screen name="profile" options={{ headerShown: false }} />
-  </Tabs>
-);
+      },
+    },
+  ];
+
+  if (signedIn) {
+    tabs.push({ name: "profile", options: { headerShown: false } });
+  }
+
+  return (
+    <Tabs tabBar={(props) => <BottomTabBar {...props} />}>
+      {tabs.map((tab, index) => (
+        <Tabs.Screen key={index} name={`${tab.name}`} options={tab.options} />
+      ))}
+    </Tabs>
+  );
+};

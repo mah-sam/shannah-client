@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getItemAsync } from "expo-secure-store";
+import { router } from "expo-router";
+import { deleteItemAsync, getItemAsync } from "expo-secure-store";
 import { createContext, useContext, useEffect, useState } from "react";
 
 const GlobalContext = createContext(null);
@@ -12,6 +13,7 @@ export function GlobalProvider({ children }) {
   const [cartItems, setCartItems] = useState({ meal: [], banquet: [] });
   const [signedIn, setSignedIn] = useState(false);
   const [userData, setUserData] = useState({});
+  const [deliveryAddress, setDeliveryAddress] = useState({});
 
   useEffect(() => {
     (async () => {
@@ -47,6 +49,16 @@ export function GlobalProvider({ children }) {
       })();
   }, [signedIn]);
 
+  const signOut = async () => {
+    await deleteItemAsync("token");
+    await AsyncStorage.removeItem("user");
+    setSignedIn(false);
+    setUserData({});
+    setCartItems({ meal: [], banquet: [] });
+
+    router.navigate("sign-in");
+  };
+
   return (
     <GlobalContext.Provider
       value={{
@@ -56,6 +68,9 @@ export function GlobalProvider({ children }) {
         setSignedIn,
         userData,
         setUserData,
+        signOut,
+        deliveryAddress,
+        setDeliveryAddress,
       }}
     >
       {children}

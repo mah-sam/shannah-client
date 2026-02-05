@@ -1,8 +1,9 @@
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
-import { StoresList } from "../../components/HomeComponents";
+import { OrderAgainCard, StoresList } from "../../components/HomeComponents";
 import {
   ArrowDropdownIcon,
   ChevronDownIcon,
@@ -11,22 +12,85 @@ import {
   MarkerPinIcon,
   SearchIcon,
 } from "../../components/Icons";
-import { getStores } from "../../services/shannahApi";
+import { useGlobal } from "../../context/GlobalContext";
+import useAuth from "../../hooks/useAuth";
+import { getOrders, getStores } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
 export default function HomeScreen() {
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchText, setSeachText] = useState("");
-  const [stores, setStores] = useState([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { signedIn, deliveryAddress } = useGlobal();
+  const { token } = useAuth();
+  const [pastOrdersStores, setPastOrdersStores] = useState({
+    meal: [],
+    banquet: [],
+  });
+  const [stores, setStores] = useState({
+    meal: [],
+    banquet: [],
+  });
   const [productType, setProductType] = useState("meal");
+
+  const handleFavoriteToggle = (storeId, isFavorited) => {
+    // Update pastOrdersStores
+    setPastOrdersStores((prevStores) => {
+      return {
+        ...prevStores,
+        [productType]: prevStores[productType].map((store) =>
+          store.id === storeId ? { ...store, is_favorite: isFavorited } : store,
+        ),
+      };
+    });
+    // Update stores
+    setStores((prevStores) => {
+      return {
+        ...prevStores,
+        [productType]: prevStores[productType].map((store) =>
+          store.id === storeId ? { ...store, is_favorite: isFavorited } : store,
+        ),
+      };
+    });
+  };
+
+  useEffect(() => {
+    token &&
+      (async () => {
+        const result = await getOrders(token);
+        // Filter completed orders and extract unique stores grouped by item type
+        const completedOrders =
+          result?.data?.filter((order) => order.status === "completed") ?? [];
+
+        const mealStoresMap = new Map();
+        const banquetStoresMap = new Map();
+
+        completedOrders.forEach((order) => {
+          if (!order.store) return;
+
+          const hasMeal = order.items?.some((item) => item.type === "meal");
+          const hasBanquet = order.items?.some(
+            (item) => item.type === "banquet",
+          );
+
+          if (hasMeal && !mealStoresMap.has(order.store.id)) {
+            mealStoresMap.set(order.store.id, order.store);
+          }
+          if (hasBanquet && !banquetStoresMap.has(order.store.id)) {
+            banquetStoresMap.set(order.store.id, order.store);
+          }
+        });
+
+        setPastOrdersStores({
+          meal: Array.from(mealStoresMap.values()),
+          banquet: Array.from(banquetStoresMap.values()),
+        });
+      })();
+  }, [token]);
 
   useEffect(() => {
     (async () => {
-      const result = await getStores();
+      const result = await getStores(token);
       setStores(result.data);
     })();
-  }, []);
+  }, [token]);
 
   return (
     <SafeAreaInsetsContext.Consumer>
@@ -38,72 +102,79 @@ export default function HomeScreen() {
           }}
         >
           <View style={styles.topBar}>
-            <View style={styles.topBarRow}>
-              <View style={styles.shippingAddressContainer}>
-                <View style={styles.shippingAddressDropdown}>
-                  <MarkerPinIcon style={styles.markerPinIcon} />
-                  <Text style={styles.shippingAddressDropdownText}>
-                    التوصيل إلى
+            {signedIn && (
+              <View style={styles.topBarRow}>
+                <View style={styles.shippingAddressContainer}>
+                  <Pressable onPress={() => router.push("/addresses/select")}>
+                    <View style={styles.shippingAddressDropdown}>
+                      <MarkerPinIcon style={styles.markerPinIcon} />
+                      <Text style={styles.shippingAddressDropdownText}>
+                        التوصيل إلى
+                      </Text>
+                      <ChevronDownIcon style={styles.chevronDownIcon} />
+                    </View>
+                  </Pressable>
+                  <Text style={styles.shippingAddressText} numberOfLines={2}>
+                    {deliveryAddress.national_address}
                   </Text>
-                  <ChevronDownIcon style={styles.chevronDownIcon} />
                 </View>
-                <Text style={styles.shippingAddressText}>
-                  المبنى رقم ١٢، حي الياسمين، طريق الملك عبد العزيز، الرياض
-                </Text>
+                <Pressable onPress={() => router.push("/favorite")}>
+                  <HeartRoundedIcon style={styles.heartRoundedIcon} />
+                </Pressable>
               </View>
-              <HeartRoundedIcon style={styles.heartRoundedIcon} />
-            </View>
-            <View>
-              {searchText.length === 0 && (
+            )}
+            <Pressable
+              onPress={() => {
+                router.navigate("/(tabs)/search");
+              }}
+            >
+              <View pointerEvents="none">
                 <Text style={styles.searchInputPlaceholder}>
                   ابحث عن الطعام والوجبات والولائم
                 </Text>
-              )}
-              <Input
-                textStyle={styles.searchInputText}
-                accessoryLeft={() => (
-                  <SearchIcon
-                    style={
-                      searchFocused
-                        ? styles.searchIconFocused
-                        : styles.searchIcon
-                    }
-                  />
-                )}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                value={searchText}
-                onChangeText={(t) => setSeachText(t)}
-              />
-            </View>
-          </View>
 
-          <View style={styles.tabBarContainer}>
-            <View style={styles.tabBar}>
-              <Pressable
-                style={
-                  productType === "meal"
-                    ? [styles.tab, styles.tabActive]
-                    : styles.tab
-                }
-                onPress={() => setProductType("meal")}
-              >
-                <Text style={styles.tabText}>الوجبات</Text>
-              </Pressable>
-              <Pressable
-                style={
-                  productType === "banquet"
-                    ? [styles.tab, styles.tabActive]
-                    : styles.tab
-                }
-                onPress={() => setProductType("banquet")}
-              >
-                <Text style={styles.tabText}>الولائم</Text>
-              </Pressable>
-            </View>
+                <Input
+                  textStyle={styles.searchInputText}
+                  accessoryLeft={() => <SearchIcon style={styles.searchIcon} />}
+                  readOnly={true}
+                />
+              </View>
+            </Pressable>
           </View>
-          <ScrollView horizontal={true} style={styles.filtersScrollView}>
-            <View style={styles.filtersContainer}>
+          <ScrollView>
+            <View style={styles.tabBarContainer}>
+              <View style={styles.tabBar}>
+                <Pressable
+                  style={
+                    productType === "meal"
+                      ? [styles.tab, styles.tabActive]
+                      : styles.tab
+                  }
+                  onPress={() => setProductType("meal")}
+                >
+                  <Text category="s2" style={styles.tabText}>
+                    الوجبات
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={
+                    productType === "banquet"
+                      ? [styles.tab, styles.tabActive]
+                      : styles.tab
+                  }
+                  onPress={() => setProductType("banquet")}
+                >
+                  <Text category="s2" style={styles.tabText}>
+                    الولائم
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+            <ScrollView
+              horizontal={true}
+              style={styles.filtersScrollView}
+              contentContainerStyle={styles.filtersContainer}
+            >
               <Button
                 appearance="outline"
                 status="basic"
@@ -152,18 +223,40 @@ export default function HomeScreen() {
               <Pressable>
                 <FilterFunnelIcon style={styles.filterFunnelIcon} />
               </Pressable>
-            </View>
+            </ScrollView>
+
+            {pastOrdersStores[productType].length > 0 && (
+              <View style={styles.orderAgainContainer}>
+                <Text category="h3" style={styles.title}>
+                  اطلب مرة أخرى
+                </Text>
+                <ScrollView
+                  horizontal={true}
+                  contentContainerStyle={styles.orderAgainCardsContainer}
+                >
+                  {pastOrdersStores[productType].map((store) => (
+                    <OrderAgainCard
+                      key={store.id}
+                      store={store}
+                      onFavoriteToggle={handleFavoriteToggle}
+                    ></OrderAgainCard>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {stores[productType].length > 0 && (
+              <View style={styles.storesContainer}>
+                <Text category="h3" style={styles.title}>
+                  استكشف المتاجر
+                </Text>
+                <StoresList
+                  items={stores[productType]}
+                  onFavoriteToggle={handleFavoriteToggle}
+                />
+              </View>
+            )}
           </ScrollView>
-          <View style={styles.storesContainer}>
-            <Text category="h3" style={styles.exploreStores}>
-              استكشف المتاجر
-            </Text>
-            <StoresList
-              items={stores[productType]}
-              isRefreshing={isRefreshing}
-              setIsRefreshing={setIsRefreshing}
-            ></StoresList>
-          </View>
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -199,6 +292,7 @@ const styles = StyleSheet.create({
     tintColor: theme["color-basic-100"],
   },
   shippingAddressContainer: {
+    flexShrink: 1,
     gap: 8,
   },
   shippingAddressDropdown: {
@@ -213,7 +307,8 @@ const styles = StyleSheet.create({
     fontFamily: "TajawalMedium",
     color: theme["color-basic-100"],
     textAlignVertical: "bottom",
-    textAlign: "center",
+    lineHeight: 16,
+    textAlign: "left",
   },
   heartRoundedIcon: {
     width: 24,
@@ -273,9 +368,7 @@ const styles = StyleSheet.create({
     boxShadow: "0px 2px 4px rgba(136, 30, 211, 0.15)",
   },
   tabText: {
-    fontFamily: "TajawalMedium",
     color: theme["color-black"],
-    fontSize: 14,
   },
   filtersScrollView: { maxHeight: 44 },
   filtersContainer: {
@@ -309,14 +402,24 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: theme["color-on-surface-variant"],
   },
+  orderAgainContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  orderAgainCardsContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
   storesContainer: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
   },
-  exploreStores: {
+  title: {
     fontFamily: "TajawalBold",
     color: theme["color-black"],
+    textAlign: "left",
   },
 });
