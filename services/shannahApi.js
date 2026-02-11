@@ -27,7 +27,7 @@ export async function login(email, password) {
 
     return response.data;
   } catch (error) {
-    if (error.status === 422) {
+    if (error.status === 422 || error.status === 403) {
       return error.response.data;
     }
 
@@ -55,6 +55,36 @@ export async function verifyOtp(phoneNumber, otp) {
   try {
     const response = await axios.post(`${BASE_URL}/auth/otp/verify`, {
       phone: phoneNumber,
+      otp: otp,
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error.status === 400 || error.status === 422) {
+      return error.response.data;
+    }
+    console.error("Error verifying OTP:", error);
+  }
+}
+
+export async function signUp(data) {
+  try {
+    const response = await axios.post(`${BASE_URL}/auth/register`, data);
+
+    return response.data;
+  } catch (error) {
+    if (error.status === 422) {
+      return error.response.data;
+    }
+
+    console.error(error);
+  }
+}
+
+export async function verifyEmailOtp(email, otp) {
+  try {
+    const response = await axios.post(`${BASE_URL}/auth/email-otp/verify`, {
+      email: email,
       otp: otp,
     });
 

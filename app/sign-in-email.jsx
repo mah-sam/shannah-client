@@ -42,17 +42,25 @@ export default function SignInEmail() {
     setIsSubmitting(true);
     const data = await login(email.trim(), password);
     setIsSubmitting(false);
-    if (data?.status !== true) {
+
+    if (data?.status === true) {
+      await setItemAsync("token", data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+      setSignedIn(true);
+      setUserData(data.user);
+
+      router.replace("/(tabs)/");
+    } else if (data?.status === false && data?.code === "EMAIL_NOT_VERIFIED") {
+      router.push({
+        pathname: "/sign-up",
+        params: {
+          email: email.trim(),
+          otpSent: true,
+        },
+      });
+    } else {
       Alert.alert("خطأ", data.message);
-      return;
     }
-
-    await setItemAsync("token", data.token);
-    await AsyncStorage.setItem("user", JSON.stringify(data.user));
-    setSignedIn(true);
-    setUserData(data.user);
-
-    router.replace("/(tabs)/");
   };
 
   return (
@@ -122,12 +130,14 @@ export default function SignInEmail() {
                 </Text>
               </View>
             </Button>
-            <Text category="s1" style={styles.dontHaveAccountText}>
-              ليس لديك حساب؟{" "}
-              <Text category="s1" status="primary" style={styles.signUpLink}>
-                سجل الآن
-              </Text>
-            </Text>
+            <View style={styles.dontHaveAccountContainer}>
+              <Text category="s1">ليس لديك حساب؟ </Text>
+              <Pressable onPress={() => router.push("/sign-up")}>
+                <Text category="s1" status="primary" style={styles.signUpLink}>
+                  سجل الآن
+                </Text>
+              </Pressable>
+            </View>
           </View>
           <View style={[styles.termsContainer, { bottom: insets.bottom + 20 }]}>
             <Text
@@ -189,12 +199,16 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     textAlign: "right",
   },
+  dontHaveAccountContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   dontHaveAccountText: {
     lineHeight: 24,
     color: theme["text-body-color"],
     textAlign: "center",
   },
-
   buttonsContainer: {
     width: "100%",
     gap: 16,
