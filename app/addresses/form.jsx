@@ -18,7 +18,6 @@ import {
   HomeOutlineIcon,
   MarkerPinIcon,
   OfficeIcon,
-  PartnerHeartOutlineIcon,
   PlusIcon,
   SearchIcon,
 } from "../../components/Icons";
@@ -47,6 +46,7 @@ export default function Form() {
   const isEditMode = action === "edit";
   const { keyboardOpen } = useKeyboard();
   const [hasRetriedLocation, setHasRetriedLocation] = useState(false);
+  const initializedAddressRef = useRef(false);
 
   const initErrors = {
     label: null,
@@ -65,14 +65,6 @@ export default function Form() {
     {
       name: "المكتب",
       icon: () => <OfficeIcon style={styles.labelIcon}></OfficeIcon>,
-    },
-    {
-      name: "الشريك",
-      icon: () => (
-        <PartnerHeartOutlineIcon
-          style={styles.labelIcon}
-        ></PartnerHeartOutlineIcon>
-      ),
     },
     {
       name: "أخرى",
@@ -141,6 +133,12 @@ export default function Form() {
       latitude: location.latitude,
       longitude: location.longitude,
     });
+
+    // Initialize address on first render with location
+    if (!initializedAddressRef.current) {
+      initializedAddressRef.current = true;
+      reverseGeocode(location.latitude, location.longitude);
+    }
   }, [location, isEditMode]);
 
   useEffect(() => {
@@ -182,13 +180,6 @@ export default function Form() {
     setCoords({ latitude, longitude });
     setResults([]);
     setSeachText("");
-    setAddress({
-      lat: item.lat,
-      lon: item.lon,
-      name: item.name,
-      displayName: item.display_name,
-      address: item.address,
-    });
 
     mapRef.current?.animateCamera({
       center: { latitude, longitude },
@@ -377,9 +368,7 @@ export default function Form() {
                     />
                     <Input
                       status={errors.street === null ? "primary" : "danger"}
-                      label={() => (
-                        <Text style={styles.labelText}>رقم الشارع</Text>
-                      )}
+                      label={() => <Text style={styles.labelText}>الشارع</Text>}
                       textStyle={styles.inputText}
                       value={streetNo}
                       onChangeText={(t) => setStreetNo(t)}

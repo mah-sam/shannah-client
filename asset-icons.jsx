@@ -73,9 +73,6 @@ export const AssetIconsPack = {
       require("./assets/images/icons/home-outline.png"),
     ),
     office: IconProvider(require("./assets/images/icons/office.png")),
-    partnerHeartOutline: IconProvider(
-      require("./assets/images/icons/partner-heart-outline.png"),
-    ),
     edit: IconProvider(require("./assets/images/icons/edit.png")),
     share: IconProvider(require("./assets/images/icons/share.png")),
   },

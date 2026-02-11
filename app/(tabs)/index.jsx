@@ -23,10 +23,12 @@ export default function HomeScreen() {
   const [pastOrdersStores, setPastOrdersStores] = useState({
     meal: [],
     banquet: [],
+    market: [],
   });
   const [stores, setStores] = useState({
     meal: [],
     banquet: [],
+    market: [],
   });
   const [productType, setProductType] = useState("meal");
 
@@ -168,6 +170,18 @@ export default function HomeScreen() {
                     الولائم
                   </Text>
                 </Pressable>
+                <Pressable
+                  style={
+                    productType === "market"
+                      ? [styles.tab, styles.tabActive]
+                      : styles.tab
+                  }
+                  onPress={() => setProductType("market")}
+                >
+                  <Text category="s2" style={styles.tabText}>
+                    ماركت
+                  </Text>
+                </Pressable>
               </View>
             </View>
             <ScrollView
@@ -225,7 +239,7 @@ export default function HomeScreen() {
               </Pressable>
             </ScrollView>
 
-            {pastOrdersStores[productType].length > 0 && (
+            {(pastOrdersStores?.[productType]?.length ?? 0) > 0 && (
               <View style={styles.orderAgainContainer}>
                 <Text category="h3" style={styles.title}>
                   اطلب مرة أخرى
@@ -245,7 +259,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {stores[productType].length > 0 && (
+            {(stores?.[productType]?.length ?? 0) > 0 && (
               <View style={styles.storesContainer}>
                 <Text category="h3" style={styles.title}>
                   استكشف المتاجر

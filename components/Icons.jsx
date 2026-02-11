@@ -128,10 +128,6 @@ export const OfficeIcon = (props) => (
   <Icon {...props} name="office" pack="assets" />
 );
 
-export const PartnerHeartOutlineIcon = (props) => (
-  <Icon {...props} name="partnerHeartOutline" pack="assets" />
-);
-
 export const EditIcon = (props) => (
   <Icon {...props} name="edit" pack="assets" />
 );
