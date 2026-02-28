@@ -1,8 +1,27 @@
-import { Button, Input, Layout, Text } from "@ui-kitten/components";
+import {
+  Button,
+  Input,
+  Layout,
+  Text,
+} from "@ui-kitten/components";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+
+let MapView = View;
+let Marker = View;
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+}
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   BankNoteIcon,
@@ -15,7 +34,7 @@ import BottomActionBar from "../components/ui/BottomActionBar";
 import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
-import { submitOrder } from "../services/shannahApi";
+import { applyCoupon, submitOrder } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Checkout = () => {
@@ -26,6 +45,16 @@ const Checkout = () => {
   const { subtotal, deleteStoreById } = useCart();
   const [coords, setCoords] = useState(null);
   const [notes, setNotes] = useState("");
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  // Order submission error
+  const [orderError, setOrderError] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -39,6 +68,43 @@ const Checkout = () => {
       });
     }, [deliveryAddress]),
   );
+
+  const currentSubtotal = subtotal(productType, storeId);
+  const totalAmount = Math.max(0, currentSubtotal - couponDiscount);
+
+  const onApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+
+    setCouponLoading(true);
+    setCouponError("");
+
+    const items = (cartItems[productType]?.[storeId] ?? []).map((product) => ({
+      product_id: product.id,
+      qty: product.qty,
+      options_price: product.optionsPrice ?? 0,
+    }));
+
+    const result = await applyCoupon(token, couponCode.trim().toUpperCase(), items);
+
+    setCouponLoading(false);
+
+    if (result?.status === true) {
+      setCouponDiscount(result.discount);
+      setCouponApplied(true);
+      setCouponError("");
+    } else {
+      setCouponDiscount(0);
+      setCouponApplied(false);
+      setCouponError(result?.message || "كود الخصم غير صالح");
+    }
+  };
+
+  const onRemoveCoupon = () => {
+    setCouponCode("");
+    setCouponDiscount(0);
+    setCouponApplied(false);
+    setCouponError("");
+  };
 
   const onConfirmOrder = async () => {
     if (!signedIn) {
@@ -60,15 +126,30 @@ const Checkout = () => {
       store_id: storeId,
       address_id: deliveryAddress.id,
       delivery_method: "delivery",
-      subtotal: subtotal(productType, storeId),
-      total_amount: subtotal(productType, storeId),
+      subtotal: currentSubtotal,
+      total_amount: totalAmount,
       scheduled_at: null,
       phone: null,
       notes: notes,
       items: items,
     };
 
+    if (couponApplied && couponCode.trim()) {
+      order.coupon_code = couponCode.trim().toUpperCase();
+    }
+
+    setOrderError("");
     const result = await submitOrder(token, order);
+
+    if (!result?.status || !result?.data?.id) {
+      const msg =
+        result?.message ||
+        result?.errors?.coupon_code?.[0] ||
+        "حدث خطأ أثناء تقديم الطلب. حاول مجدداً.";
+      setOrderError(msg);
+      return;
+    }
+
     await deleteStoreById(productType, storeId);
     router.replace({
       pathname: "/order-confirmed",
@@ -177,6 +258,60 @@ const Checkout = () => {
               </View>
             </View>
 
+            {/* Coupon */}
+            <View style={styles.card}>
+              <Text category="s1">كود الخصم</Text>
+              {couponApplied ? (
+                <View style={styles.couponAppliedRow}>
+                  <View style={styles.couponBadge}>
+                    <Text category="s2" style={styles.couponBadgeText}>
+                      {couponCode}
+                    </Text>
+                  </View>
+                  <Pressable onPress={onRemoveCoupon}>
+                    <Text category="s2" status="danger">
+                      إزالة
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.couponInputRow}>
+                  <Input
+                    style={styles.couponInput}
+                    placeholder="أدخل كود الخصم"
+                    value={couponCode}
+                    onChangeText={(t) => {
+                      setCouponCode(t);
+                      setCouponError("");
+                    }}
+                    textAlign="right"
+                    status={couponError ? "danger" : "basic"}
+                  />
+                  <Button
+                    size="small"
+                    onPress={onApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    style={styles.couponButton}
+                  >
+                    {couponLoading
+                      ? () => (
+                          <ActivityIndicator size="small" color="#fff" />
+                        )
+                      : () => (
+                          <Text category="s2" status="control">
+                            تطبيق
+                          </Text>
+                        )}
+                  </Button>
+                </View>
+              )}
+              {couponError ? (
+                <Text category="c1" status="danger">
+                  {couponError}
+                </Text>
+              ) : null}
+            </View>
+
             <View style={styles.card}>
               <View style={{ gap: 4 }}>
                 <View style={styles.cardTitle}>
@@ -188,10 +323,25 @@ const Checkout = () => {
                 <View style={styles.summaryCardRow}>
                   <Text category="s2">المجموع الفرعي</Text>
                   <View style={styles.priceContainer}>
-                    <Text category="s2">{subtotal(productType, storeId)}</Text>
+                    <Text category="s2">{currentSubtotal}</Text>
                     <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
+                {couponDiscount > 0 && (
+                  <View style={styles.summaryCardRow}>
+                    <Text category="s2" status="success">
+                      الخصم
+                    </Text>
+                    <View style={styles.priceContainer}>
+                      <Text category="s2" status="success">
+                        -{couponDiscount}
+                      </Text>
+                      <SarIcon
+                        style={[styles.sarIcon, styles.sarIconDiscount]}
+                      ></SarIcon>
+                    </View>
+                  </View>
+                )}
                 <View style={styles.summaryCardRow}>
                   <Text category="s2">رسوم التوصيل</Text>
                   <View style={styles.priceContainer}>
@@ -213,12 +363,22 @@ const Checkout = () => {
                 </Text>
 
                 <View style={styles.priceContainer}>
-                  <Text category="s1">{subtotal(productType, storeId)}</Text>
+                  <Text category="s1">{totalAmount}</Text>
                   <SarIcon style={styles.sarIcon}></SarIcon>
                 </View>
               </View>
             </View>
           </ScrollView>
+
+          {orderError ? (
+            <Text
+              category="c1"
+              status="danger"
+              style={{ textAlign: "center", paddingHorizontal: 16, paddingBottom: 4 }}
+            >
+              {orderError}
+            </Text>
+          ) : null}
 
           <BottomActionBar>
             <Button onPress={() => onConfirmOrder()}>
@@ -335,6 +495,34 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     tintColor: theme["color-black"],
+  },
+  sarIconDiscount: {
+    tintColor: "#34A853",
+  },
+  couponInputRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  couponInput: {
+    flex: 1,
+  },
+  couponButton: {
+    height: 40,
+  },
+  couponAppliedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  couponBadge: {
+    backgroundColor: theme["color-primary-50"],
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  couponBadgeText: {
+    color: theme["color-primary-500"],
   },
 });
 

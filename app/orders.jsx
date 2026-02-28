@@ -1,11 +1,11 @@
 import { Button, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
 import useAuth from "../hooks/useAuth";
-import { getOrders } from "../services/shannahApi";
+import { getOrders, submitReview } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function Orders() {
@@ -29,6 +29,15 @@ export default function Orders() {
       }
     })();
   }, [token]);
+
+  const handleRating = async (orderId, rating) => {
+    const result = await submitReview(token, orderId, rating);
+    if (result?.status === true) {
+      setPastOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, rating } : o)),
+      );
+    }
+  };
 
   const badgeStyle = (status) => {
     if (status === "new") {
@@ -174,19 +183,49 @@ export default function Orders() {
                       )}
                     </Button>
 
-                    {order.rating === null ? (
+                    {order.status === "completed" && (
                       <View style={styles.ratingContainer}>
-                        <Text>اضغط للتقييم</Text>
-                        <View style={styles.starsContainer}>
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <StarIcon
-                              key={index}
-                              style={[styles.starIcon, styles.starInactive]}
-                            ></StarIcon>
-                          ))}
-                        </View>
+                        {order.rating === null ? (
+                          <>
+                            <Text>اضغط للتقييم</Text>
+                            <View style={styles.starsContainer}>
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <Pressable
+                                  key={index}
+                                  onPress={() =>
+                                    handleRating(order.id, index + 1)
+                                  }
+                                >
+                                  <StarIcon
+                                    style={[
+                                      styles.starIcon,
+                                      styles.starInactive,
+                                    ]}
+                                  />
+                                </Pressable>
+                              ))}
+                            </View>
+                          </>
+                        ) : (
+                          <>
+                            <Text>تقييمك</Text>
+                            <View style={styles.starsContainer}>
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <StarIcon
+                                  key={index}
+                                  style={[
+                                    styles.starIcon,
+                                    index < order.rating
+                                      ? styles.starActive
+                                      : styles.starInactive,
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                          </>
+                        )}
                       </View>
-                    ) : null}
+                    )}
                   </View>
                 ))}
               </View>
@@ -285,6 +324,9 @@ const styles = StyleSheet.create({
   starIcon: {
     width: 16,
     height: 16,
+  },
+  starActive: {
+    tintColor: "#F5A623",
   },
   starInactive: {
     tintColor: theme["color-gray"],

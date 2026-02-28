@@ -2,6 +2,7 @@
   "expo": {
     "name": "shannah-client",
     "slug": "shannah-client",
+    "owner": "shnah",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon-new.png",

@@ -1,19 +1,28 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { router } from "expo-router";
+import { deleteItemAsync } from "expo-secure-store";
+import { Alert } from "react-native";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Response interceptor to handle 403 with PROFILE_INCOMPLETE
+// Response interceptor to handle 403 codes
 axios.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (
-      error.response?.status === 403 &&
-      error.response?.data?.status === false &&
-      error.response?.data?.code === "PROFILE_INCOMPLETE"
-    ) {
+  async (error) => {
+    const code = error.response?.data?.code;
+
+    if (error.response?.status === 403 && code === "PROFILE_INCOMPLETE") {
       router.push("/profile-complete");
     }
+
+    if (error.response?.status === 403 && code === "ACCOUNT_SUSPENDED") {
+      await deleteItemAsync("token");
+      await AsyncStorage.removeItem("user");
+      router.replace("/sign-in");
+      Alert.alert("حساب موقوف", "حسابك موقوف. تواصل مع الدعم.");
+    }
+
     return Promise.reject(error);
   },
 );
@@ -73,7 +82,7 @@ export async function signUp(data) {
 
     return response.data;
   } catch (error) {
-    if (error.status === 422) {
+    if (error.status === 422 || error.status === 403) {
       return error.response.data;
     }
 
@@ -367,6 +376,50 @@ export async function searchTags() {
 
     return response.data;
   } catch (error) {
+    console.error(error);
+  }
+}
+
+export async function applyCoupon(token, code, items) {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/client/coupons/apply`,
+      { code, items },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 422) {
+      return error.response.data;
+    }
+
+    console.error(error);
+  }
+}
+
+export async function submitReview(token, orderId, rating) {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/client/reviews`,
+      { order_id: orderId, rating },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 422) {
+      return error.response.data;
+    }
+
     console.error(error);
   }
 }
