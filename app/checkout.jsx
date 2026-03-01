@@ -34,7 +34,7 @@ import BottomActionBar from "../components/ui/BottomActionBar";
 import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
-import { applyCoupon, submitOrder } from "../services/shannahApi";
+import { applyCoupon, getPlatformSettings, getStores, submitOrder } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Checkout = () => {
@@ -53,6 +53,10 @@ const Checkout = () => {
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Fee/tax state (fetched from platform settings + store override)
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [vatPercent, setVatPercent] = useState(15);
+
   // Order submission error
   const [orderError, setOrderError] = useState("");
 
@@ -66,11 +70,28 @@ const Checkout = () => {
         latitude: parseFloat(deliveryAddress.lat),
         longitude: parseFloat(deliveryAddress.lng),
       });
-    }, [deliveryAddress]),
+
+      const fetchFees = async () => {
+        const [settingsResult, storeResult] = await Promise.all([
+          getPlatformSettings(),
+          getStores(null, storeId),
+        ]);
+        setVatPercent(parseFloat(settingsResult?.vat_percent ?? 15));
+        const storeDelivery = storeResult?.data?.delivery_fee;
+        setDeliveryFee(
+          storeDelivery != null
+            ? parseFloat(storeDelivery)
+            : parseFloat(settingsResult?.delivery_fee ?? 0),
+        );
+      };
+      fetchFees();
+    }, [deliveryAddress, storeId]),
   );
 
   const currentSubtotal = subtotal(productType, storeId);
-  const totalAmount = Math.max(0, currentSubtotal - couponDiscount);
+  const taxableAmount = Math.max(0, currentSubtotal - couponDiscount);
+  const taxAmount = Math.round(taxableAmount * vatPercent / 100 * 100) / 100;
+  const totalAmount = taxableAmount + deliveryFee + taxAmount;
 
   const onApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -126,8 +147,6 @@ const Checkout = () => {
       store_id: storeId,
       address_id: deliveryAddress.id,
       delivery_method: "delivery",
-      subtotal: currentSubtotal,
-      total_amount: totalAmount,
       scheduled_at: null,
       phone: null,
       notes: notes,
@@ -345,14 +364,14 @@ const Checkout = () => {
                 <View style={styles.summaryCardRow}>
                   <Text category="s2">رسوم التوصيل</Text>
                   <View style={styles.priceContainer}>
-                    <Text category="s2">0</Text>
+                    <Text category="s2">{deliveryFee}</Text>
                     <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
                 <View style={styles.summaryCardRow}>
                   <Text category="s2">الضريبة</Text>
                   <View style={styles.priceContainer}>
-                    <Text category="s2">0</Text>
+                    <Text category="s2">{taxAmount}</Text>
                     <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>

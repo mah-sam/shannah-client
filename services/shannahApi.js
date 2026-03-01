@@ -380,6 +380,16 @@ export async function searchTags() {
   }
 }
 
+export async function getPlatformSettings() {
+  try {
+    const response = await axios.get(`${BASE_URL}/platform-settings`);
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    return { vat_percent: 15, delivery_fee: 0 };
+  }
+}
+
 export async function applyCoupon(token, code, items) {
   try {
     const response = await axios.post(
@@ -420,6 +430,81 @@ export async function submitReview(token, orderId, rating) {
       return error.response.data;
     }
 
+    console.error(error);
+  }
+}
+
+// ─── Push Tokens ────────────────────────────────────────────────────────────
+
+export async function registerPushToken(token, pushToken, platform) {
+  try {
+    await axios.post(
+      `${BASE_URL}/push-tokens`,
+      { token: pushToken, platform },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (error) {
+    console.error("Failed to register push token:", error);
+  }
+}
+
+export async function unregisterPushToken(token, pushToken) {
+  try {
+    await axios.delete(`${BASE_URL}/push-tokens`, {
+      data: { token: pushToken },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    console.error("Failed to unregister push token:", error);
+  }
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export async function getNotifications(token) {
+  try {
+    const response = await axios.get(`${BASE_URL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    return { data: [] };
+  }
+}
+
+export async function getUnreadCount(token) {
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/notifications/unread-count`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return response.data;
+  } catch (error) {
+    return { count: 0 };
+  }
+}
+
+export async function markNotificationRead(token, id) {
+  try {
+    await axios.post(
+      `${BASE_URL}/notifications/${id}/read`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+export async function markAllNotificationsRead(token) {
+  try {
+    await axios.post(
+      `${BASE_URL}/notifications/read-all`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (error) {
     console.error(error);
   }
 }
