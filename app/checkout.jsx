@@ -62,13 +62,17 @@ const Checkout = () => {
 
   useFocusEffect(
     useCallback(() => {
-      if (!deliveryAddress || !deliveryAddress.lat || !deliveryAddress.lng) {
+      // Backend renamed lat/lng → latitude/longitude. Prefer the new keys,
+      // fall back to legacy ones during the rollout.
+      const addrLat = deliveryAddress?.latitude ?? deliveryAddress?.lat;
+      const addrLng = deliveryAddress?.longitude ?? deliveryAddress?.lng;
+      if (!deliveryAddress || addrLat == null || addrLng == null) {
         router.push("/addresses/select");
         return;
       }
       setCoords({
-        latitude: parseFloat(deliveryAddress.lat),
-        longitude: parseFloat(deliveryAddress.lng),
+        latitude: parseFloat(addrLat),
+        longitude: parseFloat(addrLng),
       });
 
       const fetchFees = async () => {

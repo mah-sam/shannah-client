@@ -99,15 +99,19 @@ export default function Form() {
           setLabel(addressData.label || "");
         }
 
-        // Set address and coordinates
+        // Backend renamed lat/lng → latitude/longitude. Prefer new keys, fall
+        // back to legacy keys so the form works during the rename rollout.
+        const apiLat = addressData.latitude ?? addressData.lat;
+        const apiLng = addressData.longitude ?? addressData.lng;
+
         setCoords({
-          latitude: parseFloat(addressData.lat),
-          longitude: parseFloat(addressData.lng),
+          latitude: parseFloat(apiLat),
+          longitude: parseFloat(apiLng),
         });
 
         setAddress({
-          lat: addressData.lat,
-          lon: addressData.lng,
+          lat: apiLat,
+          lon: apiLng,
           name: null,
           displayName: addressData.national_address,
           address: {
@@ -207,12 +211,17 @@ export default function Form() {
       address.address.hamlet ||
       null;
 
+    // Send both new (latitude/longitude) and legacy (lat/lng) keys so the
+    // payload works against either backend version. Laravel ignores unknown
+    // keys at mass-assignment, so the inactive pair is a harmless no-op.
     const data = {
       label: addressLabel,
       city: city,
       area: area,
       street: streetNo,
       building_no: buildingNo,
+      latitude: address.lat,
+      longitude: address.lon,
       lat: address.lat,
       lng: address.lon,
       national_address: address.displayName,
