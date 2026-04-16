@@ -1,9 +1,7 @@
 {
   "expo": {
-    "owner": "shnah",
     "name": "shannah-client",
     "slug": "shannah-client",
-    "owner": "shnah",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon-new.png",
@@ -44,7 +42,9 @@
       "favicon": "./assets/images/favicon.png",
       "build": {
         "babel": {
-          "include": ["@ui-kitten/components"]
+          "include": [
+            "@ui-kitten/components"
+          ]
         }
       },
       "bundler": "metro"
@@ -77,8 +77,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9c2a2e5c-bbc2-416a-90e4-bd8679dcd07a"
+        "projectId": "cf67d5dd-7a0d-4f01-a45f-9d64b26bc762"
       }
-    }
+    },
+    "owner": "mah-sam"
   }
 }
