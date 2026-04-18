@@ -1,8 +1,10 @@
 // @ts-nocheck
 import { Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Image, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
 import { toggleFavorite } from "../services/shannahApi";
@@ -74,12 +76,11 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
         </View>
         <Image
           source={{ uri: store.cover }}
-          borderRadius={12}
-          width={"100%"}
-          height={120}
-          resizeMode="cover"
+          contentFit="cover"
+          placeholder={{ blurhash: IMAGE_BLURHASH }}
+          transition={IMAGE_TRANSITION_MS}
           style={styles.storeCardImage}
-        ></Image>
+        />
         <View style={styles.storeCardRow}>
           <Text style={styles.storeCardTitle}>{store.name}</Text>
           <View style={styles.storeRatingContainer}>
@@ -192,12 +193,11 @@ export const StoreCard = ({
         </View>
         <Image
           source={{ uri: item.cover }}
-          borderRadius={12}
-          width={"100%"}
-          height={120}
-          resizeMode="cover"
+          contentFit="cover"
+          placeholder={{ blurhash: IMAGE_BLURHASH }}
+          transition={IMAGE_TRANSITION_MS}
           style={styles.storeCardImage}
-        ></Image>
+        />
         <View style={styles.storeCardRow}>
           <Text style={styles.storeCardTitle}>{item.name}</Text>
           <View style={styles.storeRatingContainer}>
@@ -207,6 +207,13 @@ export const StoreCard = ({
             >{`${item.rating} (${item.review_count})`}</Text>
           </View>
         </View>
+        {(item.area || item.city) && (
+          <View style={styles.locationRow}>
+            <Text style={styles.locationText}>
+              {[item.area, item.city].filter(Boolean).join("، ")}
+            </Text>
+          </View>
+        )}
         <View style={styles.storeCardRow}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <View
@@ -299,6 +306,16 @@ const styles = StyleSheet.create({
     fontFamily: "TajawalMedium",
     fontSize: 12,
     color: theme["color-black"],
+  },
+  locationRow: {
+    width: "100%",
+    flexDirection: "row",
+  },
+  locationText: {
+    fontFamily: "TajawalMedium",
+    fontSize: 12,
+    color: theme["text-body-color"],
+    textAlign: "left",
   },
   starIcon: {
     width: 16,

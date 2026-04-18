@@ -2,7 +2,7 @@
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { OrderAgainCard, StoresList } from "../../components/HomeComponents";
 import {
@@ -13,6 +13,7 @@ import {
   MarkerPinIcon,
   SearchIcon,
 } from "../../components/Icons";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import { getOrders, getStores } from "../../services/shannahApi";
@@ -32,6 +33,7 @@ export default function HomeScreen() {
     market: [],
   });
   const [productType, setProductType] = useState("meal");
+  const [loading, setLoading] = useState(true);
 
   const handleFavoriteToggle = (storeId, isFavorited) => {
     // Update pastOrdersStores
@@ -90,8 +92,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     (async () => {
-      const result = await getStores(token);
-      setStores(result.data);
+      setLoading(true);
+      try {
+        const result = await getStores(token);
+        if (result?.data) setStores(result.data);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [token]);
 
@@ -240,7 +247,13 @@ export default function HomeScreen() {
               </Pressable>
             </ScrollView>
 
-            {(pastOrdersStores?.[productType]?.length ?? 0) > 0 && (
+            {loading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+              </View>
+            )}
+
+            {!loading && (pastOrdersStores?.[productType]?.length ?? 0) > 0 && (
               <View style={styles.orderAgainContainer}>
                 <Text category="h3" style={styles.title}>
                   اطلب مرة أخرى
@@ -260,7 +273,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {(stores?.[productType]?.length ?? 0) > 0 && (
+            {!loading && (stores?.[productType]?.length ?? 0) > 0 && (
               <View style={styles.storesContainer}>
                 <Text category="h3" style={styles.title}>
                   استكشف المتاجر
@@ -270,6 +283,13 @@ export default function HomeScreen() {
                   onFavoriteToggle={handleFavoriteToggle}
                 />
               </View>
+            )}
+
+            {!loading && (stores?.[productType]?.length ?? 0) === 0 && (
+              <EmptyState
+                title="لا توجد متاجر في هذه الفئة بعد"
+                subtitle="جرّب فئة أخرى، نضيف متاجر جديدة باستمرار"
+              />
             )}
           </ScrollView>
         </Layout>
@@ -281,6 +301,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 48,
   },
   topBar: {
     backgroundColor: theme["color-primary-75"],

@@ -1,8 +1,10 @@
 // @ts-nocheck
 import { Icon, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { memo, useCallback } from "react";
-import { FlatList, Image, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import * as theme from "../theme.json";
 
 export const PlusIcon = (props) => (
@@ -27,21 +29,34 @@ export const ProductsList = ({ store, items }) => {
         <View style={styles.productCard}>
           <View style={styles.productDetails}>
             <View style={styles.productNameAndPrice}>
-              <Text category="s1" style={styles.productNameAndPriceText}>
+              <Text
+                category="s1"
+                style={styles.productNameAndPriceText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {item.name}
               </Text>
               <Text category="s2" style={styles.productNameAndPriceText}>
                 {item.price}
               </Text>
             </View>
-            <Text style={styles.productDescription}>{item.description}</Text>
+            <Text
+              style={styles.productDescription}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {item.description}
+            </Text>
           </View>
           <View style={styles.productImageContainer}>
             <Image
               source={{ uri: item.image }}
-              resizeMode="cover"
+              contentFit="cover"
+              placeholder={{ blurhash: IMAGE_BLURHASH }}
+              transition={IMAGE_TRANSITION_MS}
               style={styles.productImage}
-            ></Image>
+            />
             <View style={styles.addButton}>
               <PlusIcon style={styles.plusIcon}></PlusIcon>
             </View>
@@ -79,7 +94,7 @@ const styles = StyleSheet.create({
     borderColor: theme["color-primary-25"],
     borderRadius: 8,
   },
-  productDetails: { gap: 8 },
+  productDetails: { flex: 1, gap: 8, minWidth: 0 },
   productNameAndPrice: { gap: 2 },
   productNameAndPriceText: {
     color: theme["text-heading-color"],

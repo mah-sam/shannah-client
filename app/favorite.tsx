@@ -1,11 +1,14 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { StoreCard } from "../components/HomeComponents";
 import { HeartFilledIcon } from "../components/Icons";
+import { EmptyState } from "../components/ui/EmptyState";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import useAuth from "../hooks/useAuth";
 import { getFavorites, toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
@@ -14,15 +17,22 @@ export default function Favorite() {
   const { token } = useAuth();
   const [favorites, setFavorites] = useState([]);
   const [refresh, setRefresh] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (token || refresh) &&
       (async () => {
+        setLoading(true);
         const result = await getFavorites(token);
         setFavorites(result.data);
         setRefresh(false);
+        setLoading(false);
       })();
   }, [token, refresh]);
+
+  const hasFavorites =
+    (favorites?.stores?.length ?? 0) > 0 ||
+    (favorites?.meals?.length ?? 0) > 0;
 
   const handleToggleFavorite = async (type, id) => {
     await toggleFavorite(token, type, id);
@@ -36,8 +46,11 @@ export default function Favorite() {
           <View style={styles.product}>
             <Image
               source={{ uri: product.image }}
+              contentFit="cover"
+              placeholder={{ blurhash: IMAGE_BLURHASH }}
+              transition={IMAGE_TRANSITION_MS}
               style={styles.productImage}
-            ></Image>
+            />
             <View style={styles.productDetails}>
               <Text category="s2">{product.store.name}</Text>
               <Text>{product.name}</Text>
@@ -77,6 +90,20 @@ export default function Favorite() {
             paddingBottom: insets?.bottom + 16,
           }}
         >
+          {loading && (
+            <View style={styles.centerFill}>
+              <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+            </View>
+          )}
+
+          {!loading && !hasFavorites && (
+            <EmptyState
+              title="لا توجد مفضلات"
+              subtitle="أضف متاجر أو منتجات إلى مفضلتك لتجدها هنا"
+            />
+          )}
+
+          {!loading && hasFavorites && (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContentContainer}
@@ -108,6 +135,7 @@ export default function Favorite() {
               </View>
             )}
           </ScrollView>
+          )}
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -161,5 +189,10 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     tintColor: theme["color-primary-500"],
+  },
+  centerFill: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

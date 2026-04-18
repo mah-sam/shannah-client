@@ -11,8 +11,8 @@ import {
 } from "@ui-kitten/components";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +20,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ArrowRightIcon,
@@ -214,9 +215,11 @@ const Product = () => {
                     source={{
                       uri: product.image,
                     }}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    placeholder={{ blurhash: IMAGE_BLURHASH }}
+                    transition={IMAGE_TRANSITION_MS}
                     style={styles.productImage}
-                  ></Image>
+                  />
                   <View style={styles.backButton}>
                     <Pressable onPress={() => router.back()}>
                       <ArrowRightIcon style={styles.arrowIcon}></ArrowRightIcon>

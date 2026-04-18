@@ -5,6 +5,7 @@ import { deleteItemAsync, getItemAsync } from "expo-secure-store";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import {
+  logout,
   registerPushToken,
   unregisterPushToken,
 } from "../services/shannahApi";
@@ -127,6 +128,14 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Non-critical
+    }
+
+    // Invalidate server token before clearing local state
+    try {
+      const authToken = await getItemAsync("token");
+      if (authToken) await logout(authToken);
+    } catch {
+      // Non-critical — proceed with local cleanup
     }
 
     await deleteItemAsync("token");

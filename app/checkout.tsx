@@ -58,6 +58,9 @@ const Checkout = () => {
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [vatPercent, setVatPercent] = useState(15);
 
+  // Delivery method
+  const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">("delivery");
+
   // Order submission error
   const [orderError, setOrderError] = useState("");
 
@@ -151,7 +154,7 @@ const Checkout = () => {
     const order = {
       store_id: storeId,
       address_id: deliveryAddress.id,
-      delivery_method: "delivery",
+      delivery_method: deliveryMethod,
       scheduled_at: null,
       phone: null,
       notes: notes,
@@ -198,21 +201,21 @@ const Checkout = () => {
               <View style={styles.tabBar}>
                 <Pressable
                   style={
-                    productType === "meal"
+                    deliveryMethod === "delivery"
                       ? [styles.tab, styles.tabActive]
                       : styles.tab
                   }
-                  onPress={() => {}}
+                  onPress={() => setDeliveryMethod("delivery")}
                 >
                   <Text style={styles.tabText}>توصيل</Text>
                 </Pressable>
                 <Pressable
                   style={
-                    productType === "banquet"
+                    deliveryMethod === "pickup"
                       ? [styles.tab, styles.tabActive]
                       : styles.tab
                   }
-                  onPress={() => {}}
+                  onPress={() => setDeliveryMethod("pickup")}
                 >
                   <Text style={styles.tabText}>استلام</Text>
                 </Pressable>

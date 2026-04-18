@@ -127,7 +127,7 @@ export default function OrderConfirmed() {
           </ScrollView>
 
           <BottomActionBar>
-            <Button>
+            <Button onPress={() => router.push(`/orders`)}>
               {(evaProps) => (
                 <Text category="s1" status="control">
                   تتبع الطلب

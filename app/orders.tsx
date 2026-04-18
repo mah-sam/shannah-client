@@ -1,10 +1,13 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
+import { EmptyState } from "../components/ui/EmptyState";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import useAuth from "../hooks/useAuth";
 import { getOrders, submitReview } from "../services/shannahApi";
 import * as theme from "../theme.json";
@@ -13,10 +16,12 @@ export default function Orders() {
   const { token } = useAuth();
   const [currentOrders, setCurrentOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       if (token !== null) {
+        setLoading(true);
         const result = await getOrders(token);
         const current = result.data.filter(
           (order) => !["completed", "cancelled"].includes(order.status),
@@ -27,6 +32,7 @@ export default function Orders() {
 
         setCurrentOrders(current);
         setPastOrders(past);
+        setLoading(false);
       }
     })();
   }, [token]);
@@ -58,6 +64,20 @@ export default function Orders() {
             paddingBottom: 16 + insets?.bottom,
           }}
         >
+          {loading && (
+            <View style={styles.centerFill}>
+              <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+            </View>
+          )}
+
+          {!loading && currentOrders.length === 0 && pastOrders.length === 0 && (
+            <EmptyState
+              title="لا توجد طلبات"
+              subtitle="طلباتك ستظهر هنا بعد أول عملية شراء"
+            />
+          )}
+
+          {!loading && (currentOrders.length > 0 || pastOrders.length > 0) && (
           <ScrollView contentContainerStyle={{ gap: 16 }}>
             {currentOrders.length > 0 && (
               <View style={styles.ordersContainer}>
@@ -68,9 +88,11 @@ export default function Orders() {
                       <View style={styles.storeContainer}>
                         <Image
                           source={{ uri: order.store.logo }}
-                          resizeMode="cover"
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
-                        ></Image>
+                        />
                         <View style={{ justifyContent: "space-between" }}>
                           <Text category="s2" style={{ textAlign: "left" }}>
                             {order.store.name}
@@ -95,9 +117,11 @@ export default function Orders() {
                         <Image
                           key={product.product_id}
                           source={{ uri: product.image }}
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
-                          resizeMode="cover"
-                        ></Image>
+                        />
                       ))}
                     </ScrollView>
 
@@ -108,7 +132,7 @@ export default function Orders() {
                       </Text>
                     </View>
 
-                    <Button>
+                    <Button onPress={() => router.push({ pathname: "/order-confirmed", params: { id: order.id } })}>
                       {(evaProps) => (
                         <Text category="s1" status="control">
                           تتبع الطلب
@@ -128,9 +152,11 @@ export default function Orders() {
                       <View style={styles.storeContainer}>
                         <Image
                           source={{ uri: order.store.logo }}
-                          resizeMode="cover"
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
-                        ></Image>
+                        />
                         <View style={{ justifyContent: "space-between" }}>
                           <Text category="s2">{order.store.name}</Text>
                           <Text
@@ -153,9 +179,11 @@ export default function Orders() {
                         <Image
                           key={product.product_id}
                           source={{ uri: product.image }}
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
-                          resizeMode="cover"
-                        ></Image>
+                        />
                       ))}
                     </ScrollView>
 
@@ -232,6 +260,7 @@ export default function Orders() {
               </View>
             )}
           </ScrollView>
+          )}
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -331,5 +360,10 @@ const styles = StyleSheet.create({
   },
   starInactive: {
     tintColor: theme["color-gray"],
+  },
+  centerFill: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

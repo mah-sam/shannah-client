@@ -2,7 +2,9 @@
 import { Button, Layout, Text } from "@ui-kitten/components";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { MinusIcon, PlusIcon, SarIcon, TrashIcon } from "../components/Icons";
 import AlertDialog from "../components/ui/AlertDialog";
@@ -39,60 +41,58 @@ const CartProducts = () => {
     })();
   }, [token]);
 
-  const onQtyIncrease = (productType, storeId, productIndex) => {
-    const storeProducts = cartItems[productType][storeId];
-    storeProducts[productIndex].qty = storeProducts[productIndex].qty + 1;
+  const updateStoreProducts = (type, sId, nextProducts) => {
     setCartItems({
       ...cartItems,
-      meal: { ...cartItems["meal"], [storeId]: storeProducts },
+      [type]: { ...(cartItems[type] ?? {}), [sId]: nextProducts },
     });
   };
 
-  const onQtyDecrease = (productType, storeId, productIndex) => {
-    const storeProducts = cartItems[productType][storeId];
-    storeProducts[productIndex].qty =
-      storeProducts[productIndex].qty - 1 >= 1
-        ? storeProducts[productIndex].qty - 1
-        : 1;
-    setCartItems({
-      ...cartItems,
-      meal: { ...cartItems["meal"], [storeId]: storeProducts },
-    });
+  const onQtyIncrease = (type, sId, productIndex) => {
+    const current = cartItems[type]?.[sId] ?? [];
+    const next = current.map((item, i) =>
+      i === productIndex ? { ...item, qty: item.qty + 1 } : item,
+    );
+    updateStoreProducts(type, sId, next);
   };
 
-  const onShowDeleteDialog = (productType, storeId, productIndex) => {
-    setActiveProductType(productType);
-    setActiveStoreId(storeId);
+  const onQtyDecrease = (type, sId, productIndex) => {
+    const current = cartItems[type]?.[sId] ?? [];
+    const next = current.map((item, i) =>
+      i === productIndex
+        ? { ...item, qty: Math.max(1, item.qty - 1) }
+        : item,
+    );
+    updateStoreProducts(type, sId, next);
+  };
+
+  const onShowDeleteDialog = (type, sId, productIndex) => {
+    setActiveProductType(type);
+    setActiveStoreId(sId);
     setActiveProductIndex(productIndex);
     setShowDeleteDialog(true);
   };
 
   const onDelete = () => {
-    const storeProducts = cartItems[activeProductType][activeStoreId].filter(
-      (product, index) => index !== activeProductIndex,
+    const type = activeProductType;
+    const sId = activeStoreId;
+    const remaining = (cartItems[type]?.[sId] ?? []).filter(
+      (_, index) => index !== activeProductIndex,
     );
 
-    if (storeProducts.length === 0) {
-      const existingStoreIds = Object.keys(cartItems["meal"]);
-      const updatedStores = {};
-      existingStoreIds.forEach((existingStoreId) => {
-        if (existingStoreId != activeStoreId) {
-          updatedStores[existingStoreId] = cartItems["meal"][existingStoreId];
-        }
-      });
-
-      setCartItems({ ...cartItems, [activeProductType]: updatedStores });
+    const nextForType = { ...(cartItems[type] ?? {}) };
+    if (remaining.length === 0) {
+      delete nextForType[sId];
     } else {
-      setCartItems({
-        ...cartItems,
-        [activeProductType]: {
-          ...cartItems[activeProductType],
-          [activeStoreId]: storeProducts,
-        },
-      });
+      nextForType[sId] = remaining;
     }
 
+    setCartItems({ ...cartItems, [type]: nextForType });
     setShowDeleteDialog(false);
+
+    if (Object.keys(nextForType).length === 0) {
+      router.replace("/(tabs)/cart");
+    }
   };
 
   return (
@@ -122,8 +122,11 @@ const CartProducts = () => {
                           source={{
                             uri: product.image,
                           }}
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
                           style={styles.productImage}
-                        ></Image>
+                        />
                         <View style={styles.productNameAndQtyContainer}>
                           <Text category="s2" style={styles.productName}>
                             {product.name}
@@ -132,7 +135,7 @@ const CartProducts = () => {
                             <View style={styles.qtyContainer}>
                               <Pressable
                                 onPress={() =>
-                                  onQtyIncrease("meal", storeId, index)
+                                  onQtyIncrease(productType, storeId, index)
                                 }
                               >
                                 <PlusIcon style={styles.plusIcon}></PlusIcon>
@@ -143,7 +146,7 @@ const CartProducts = () => {
                               {product.qty > 1 ? (
                                 <Pressable
                                   onPress={() =>
-                                    onQtyDecrease("meal", storeId, index)
+                                    onQtyDecrease(productType, storeId, index)
                                   }
                                 >
                                   <MinusIcon
@@ -153,7 +156,7 @@ const CartProducts = () => {
                               ) : (
                                 <Pressable
                                   onPress={() =>
-                                    onShowDeleteDialog("meal", storeId, index)
+                                    onShowDeleteDialog(productType, storeId, index)
                                   }
                                 >
                                   <TrashIcon

@@ -101,10 +101,10 @@ const Profile = () => {
                 <CreditCard style={styles.menuItemIcon}></CreditCard>
                 <Text style={styles.menuItemText}>المدفوعات</Text>
               </View>
-              <View style={styles.menuItem}>
+              <Pressable onPress={() => router.push("/notifications")} style={styles.menuItem}>
                 <Bell style={styles.menuItemIcon}></Bell>
                 <Text style={styles.menuItemText}>الإشعارات</Text>
-              </View>
+              </Pressable>
               <View style={styles.menuItem}>
                 <HelpCircle style={styles.menuItemIcon}></HelpCircle>
                 <Text style={styles.menuItemText}>مركز المساعدة</Text>

@@ -11,23 +11,28 @@
     "preview": {
       "distribution": "internal",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://shnah.com/api"
+      },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       },
       "ios": {
-        "credentialsSource": "local",
         "distribution": "store"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://shnah.com/api"
+      }
     }
   },
   "submit": {
     "preview": {
       "ios": {
         "ascAppId": "6758158270",
-        "appleId": "eng.alagha@gmail.com",
+        "appleId": "birkartec@gmail.com",
         "appleTeamId": "N6YVSNR5B2"
       }
     },

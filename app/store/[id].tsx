@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { Layout, Spinner, Tab, TabView, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ArrowRightIcon,
@@ -13,6 +14,8 @@ import {
 } from "../../components/Icons";
 import { ProductsList } from "../../components/StoreComponents";
 import { AnimatedFavoriteButton } from "../../components/ui/AnimatedFavoriteButton";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import { getStores, toggleFavorite } from "../../services/shannahApi";
@@ -63,9 +66,11 @@ const Store = () => {
                     source={{
                       uri: store.cover,
                     }}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    placeholder={{ blurhash: IMAGE_BLURHASH }}
+                    transition={IMAGE_TRANSITION_MS}
                     style={styles.coverImage}
-                  ></Image>
+                  />
                   <View style={styles.backButton}>
                     <Pressable onPress={() => router.back()}>
                       <ArrowRightIcon
@@ -90,9 +95,11 @@ const Store = () => {
                       source={{
                         uri: store.logo,
                       }}
-                      resizeMode="cover"
+                      contentFit="cover"
+                      placeholder={{ blurhash: IMAGE_BLURHASH }}
+                      transition={IMAGE_TRANSITION_MS}
                       style={styles.logoImage}
-                    ></Image>
+                    />
                   </View>
                 </View>
                 <View style={styles.storeInfoContainer}>
@@ -105,6 +112,11 @@ const Store = () => {
                       style={styles.storeRatingText}
                     >{`${store.rating} (${store.review_count})`}</Text>
                   </View>
+                  {(store.area || store.city) && (
+                    <Text style={styles.storeLocationText}>
+                      {[store.area, store.city].filter(Boolean).join("، ")}
+                    </Text>
+                  )}
                   <ScrollView horizontal={true}>
                     <View style={styles.storeInfo}>
                       <View style={styles.distanceContainer}>
@@ -140,41 +152,52 @@ const Store = () => {
                 </View>
               </View>
               <View style={styles.tabsContainer}>
-                {Object.keys(store).length > 0 && (
+                {Object.keys(store?.products ?? {}).length > 0 ? (
                   <TabView
                     selectedIndex={selectedIndex}
                     onSelect={(index) => setSelectedIndex(index)}
                     tabBarStyle={styles.tabBar}
                     indicatorStyle={styles.indicator}
                   >
-                    {Object.keys(store?.products ?? []).map(
-                      (category, index) => (
-                        <Tab
-                          title={
-                            <View>
-                              <Text
-                                category="s1"
-                                style={
-                                  selectedIndex === index
-                                    ? styles.tabTextActive
-                                    : styles.tabText
-                                }
-                              >
-                                {category}
-                              </Text>
-                            </View>
-                          }
-                        >
-                          <Layout style={styles.tabContent}>
+                    {Object.keys(store.products).map((category, index) => (
+                      <Tab
+                        title={
+                          <View style={styles.tabTitleWrapper}>
+                            <Text
+                              category="s1"
+                              style={
+                                selectedIndex === index
+                                  ? styles.tabTextActive
+                                  : styles.tabText
+                              }
+                              numberOfLines={2}
+                            >
+                              {category}
+                            </Text>
+                          </View>
+                        }
+                      >
+                        <Layout style={styles.tabContent}>
+                          {(store.products[category]?.length ?? 0) > 0 ? (
                             <ProductsList
                               store={store}
                               items={store.products[category]}
-                            ></ProductsList>
-                          </Layout>
-                        </Tab>
-                      ),
-                    )}
+                            />
+                          ) : (
+                            <EmptyState
+                              compact
+                              title="لا توجد منتجات في هذه الفئة"
+                            />
+                          )}
+                        </Layout>
+                      </Tab>
+                    ))}
                   </TabView>
+                ) : (
+                  <EmptyState
+                    title="لا توجد منتجات حالياً"
+                    subtitle="سيتم إضافة المنتجات قريباً"
+                  />
                 )}
               </View>
             </>
@@ -257,6 +280,11 @@ const styles = StyleSheet.create({
   storeRatingText: {
     color: theme["text-body-color"],
   },
+  storeLocationText: {
+    color: theme["text-body-color"],
+    textAlign: "left",
+    fontSize: 12,
+  },
   storeInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -282,17 +310,20 @@ const styles = StyleSheet.create({
     bottom: 2.4,
     borderRadius: 0,
   },
+  tabTitleWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
   tabText: {
-    textAlign: "left",
+    textAlign: "center",
     color: theme["text-body-color"],
   },
   tabTextActive: {
-    textAlign: "left",
+    textAlign: "center",
     color: theme["text-heading-color"],
   },
   tabContent: {
-    alignItems: "center",
-    justifyContent: "center",
     paddingTop: 12,
   },
   heartButtonContainer: {

@@ -97,6 +97,17 @@ export async function profileComplete(
   }
 }
 
+export async function logout(token: string) {
+  try {
+    await api.post(`${BASE_URL}/auth/logout`, {}, {
+      headers: authHeaders(token),
+    });
+  } catch (error) {
+    // Non-critical — local cleanup will proceed regardless
+    console.error("Logout API call failed:", error);
+  }
+}
+
 export async function getUserInfo(token: string) {
   try {
     const response = await api.get(`${BASE_URL}/client/me`, {

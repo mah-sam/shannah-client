@@ -1,11 +1,14 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { PlusCircleIcon, SarIcon, TrashIcon } from "../../components/Icons";
 import AlertDialog from "../../components/ui/AlertDialog";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import useCart from "../../hooks/useCart";
@@ -18,13 +21,16 @@ const Cart = () => {
   const { deleteStoreById } = useCart();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeProductType, setActiveProductType] = useState();
   const [activeStoreId, setActiveStoreId] = useState();
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const result = await getStores(token);
       setStores(result.data);
+      setLoading(false);
     })();
   }, [token]);
 
@@ -32,7 +38,10 @@ const Cart = () => {
     return stores[productType]?.find((store) => store.id == storeId);
   };
 
-  const storeIds = Object.keys(cartItems["meal"]);
+  const productTypes = Object.keys(cartItems || {});
+  const cartIsEmpty = productTypes.every(
+    (type) => Object.keys(cartItems[type] || {}).length === 0,
+  );
 
   const onShowDeleteDialog = (productType, storeId) => {
     setActiveProductType(productType);
@@ -49,109 +58,122 @@ const Cart = () => {
     <SafeAreaInsetsContext.Consumer>
       {(insets) => (
         <Layout style={styles.container}>
-          {storeIds.length > 0 && (
-            <View style={styles.categoryContainer}>
-              <Text category="s2" style={styles.categoryTitle}>
-                الوجبات
-              </Text>
-              {storeIds.map((storeId) => (
-                <View key={storeId} style={styles.storeCard}>
-                  <View style={styles.storeCardHeader}>
-                    <View style={styles.storeInfoContainer}>
-                      <Image
-                        source={{
-                          uri: getStoreInfo("meal", storeId)?.logo,
-                        }}
-                        style={styles.storeLogo}
-                      ></Image>
-                      <View style={styles.storeInfo}>
-                        <Text category="s2" style={styles.storeName}>
-                          {getStoreInfo("meal", storeId)?.name}
-                        </Text>
-                        <Text style={styles.storePrepTime}>
-                          {`وقت التحضير ${getStoreInfo("meal", storeId)?.base_prep_time_minutes} دقيقة`}
-                        </Text>
-                      </View>
-                    </View>
-                    <Pressable
-                      onPress={() => onShowDeleteDialog("meal", storeId)}
-                    >
-                      <TrashIcon style={styles.trashIcon}></TrashIcon>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.productsContainer}>
-                    {cartItems["meal"][storeId].map((product) => (
-                      <Image
-                        key={product.id}
-                        source={{
-                          uri: product.image,
-                        }}
-                        style={styles.productImage}
-                      ></Image>
-                    ))}
-                    <Pressable onPress={() => router.push(`/store/${storeId}`)}>
-                      <PlusCircleIcon
-                        style={styles.plusCircleIcon}
-                      ></PlusCircleIcon>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.priceAndDiscountContainer}>
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>توفير 0</Text>
-                      <SarIcon style={styles.sarIcon}></SarIcon>
-                    </View>
-                    <View style={styles.priceContainer}>
-                      {/* <Text
-                        category="p2"
-                        style={{
-                          textDecorationLine: "line-through",
-                          color: theme["text-body-color"],
-                        }}
-                      ></Text> */}
-                      <View style={styles.salePriceContainer}>
-                        <Text category="s2" style={styles.priceText}>
-                          {cartItems["meal"][storeId].reduce(
-                            (prevVal, currVal) => {
-                              return (
-                                prevVal +
-                                parseFloat(currVal.price) * currVal.qty +
-                                currVal.optionsPrice
-                              );
-                            },
-                            0,
-                          )}
-                        </Text>
-                        <SarIcon style={styles.sarIcon}></SarIcon>
-                      </View>
-                    </View>
-                  </View>
-
-                  <Button
-                    appearance="outline"
-                    status="basic"
-                    onPress={() =>
-                      router.push({
-                        pathname: "/cart-products",
-                        params: {
-                          productType: "meal",
-                          storeId: storeId,
-                        },
-                      })
-                    }
-                    style={{ borderWidth: 0.8 }}
-                  >
-                    <View>
-                      <Text category="s2" style={styles.buttonText}>
-                        سلة التسوق
-                      </Text>
-                    </View>
-                  </Button>
-                </View>
-              ))}
+          {loading && (
+            <View style={styles.centerFill}>
+              <ActivityIndicator size="large" color={theme["color-primary-500"]} />
             </View>
           )}
+
+          {!loading && cartIsEmpty && (
+            <EmptyState
+              title="سلة التسوق فارغة"
+              subtitle="أضف منتجات من المتاجر للمتابعة"
+            />
+          )}
+
+          {!loading && !cartIsEmpty && productTypes.map((productType) => {
+            const storeIds = Object.keys(cartItems[productType] || {});
+            if (storeIds.length === 0) return null;
+            const typeLabels = { meal: "الوجبات", banquet: "الولائم", market: "ماركت" };
+            return (
+              <View key={productType} style={styles.categoryContainer}>
+                <Text category="s2" style={styles.categoryTitle}>
+                  {typeLabels[productType] || productType}
+                </Text>
+                {storeIds.map((storeId) => (
+                  <View key={storeId} style={styles.storeCard}>
+                    <View style={styles.storeCardHeader}>
+                      <View style={styles.storeInfoContainer}>
+                        <Image
+                          source={{
+                            uri: getStoreInfo(productType, storeId)?.logo,
+                          }}
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
+                          style={styles.storeLogo}
+                        />
+                        <View style={styles.storeInfo}>
+                          <Text category="s2" style={styles.storeName}>
+                            {getStoreInfo(productType, storeId)?.name}
+                          </Text>
+                          <Text style={styles.storePrepTime}>
+                            {`وقت التحضير ${getStoreInfo(productType, storeId)?.base_prep_time_minutes} دقيقة`}
+                          </Text>
+                        </View>
+                      </View>
+                      <Pressable
+                        onPress={() => onShowDeleteDialog(productType, storeId)}
+                      >
+                        <TrashIcon style={styles.trashIcon}></TrashIcon>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.productsContainer}>
+                      {cartItems[productType][storeId].map((product) => (
+                        <Image
+                          key={product.id}
+                          source={{
+                            uri: product.image,
+                          }}
+                          contentFit="cover"
+                          placeholder={{ blurhash: IMAGE_BLURHASH }}
+                          transition={IMAGE_TRANSITION_MS}
+                          style={styles.productImage}
+                        />
+                      ))}
+                      <Pressable onPress={() => router.push(`/store/${storeId}`)}>
+                        <PlusCircleIcon
+                          style={styles.plusCircleIcon}
+                        ></PlusCircleIcon>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.priceAndDiscountContainer}>
+                      <View style={styles.priceContainer}>
+                        <View style={styles.salePriceContainer}>
+                          <Text category="s2" style={styles.priceText}>
+                            {cartItems[productType][storeId].reduce(
+                              (prevVal, currVal) => {
+                                return (
+                                  prevVal +
+                                  parseFloat(currVal.price) * currVal.qty +
+                                  currVal.optionsPrice
+                                );
+                              },
+                              0,
+                            )}
+                          </Text>
+                          <SarIcon style={styles.sarIcon}></SarIcon>
+                        </View>
+                      </View>
+                    </View>
+
+                    <Button
+                      appearance="outline"
+                      status="basic"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/cart-products",
+                          params: {
+                            productType: productType,
+                            storeId: storeId,
+                          },
+                        })
+                      }
+                      style={{ borderWidth: 0.8 }}
+                    >
+                      <View>
+                        <Text category="s2" style={styles.buttonText}>
+                          سلة التسوق
+                        </Text>
+                      </View>
+                    </Button>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
           <AlertDialog
             visible={showDeleteDialog}
             title="تأكيد الحذف"
@@ -247,6 +269,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: theme["text-heading-color"],
+  },
+  centerFill: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

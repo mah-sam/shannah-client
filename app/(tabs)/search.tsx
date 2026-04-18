@@ -1,10 +1,13 @@
 // @ts-nocheck
 import { Button, Input, Layout, Spinner, Text } from "@ui-kitten/components";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SearchIcon } from "../../components/Icons";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
 import { search, searchTags } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
@@ -71,28 +74,41 @@ const Search = () => {
             />
           </View>
           <View style={styles.searchContainer}>
-            {searchResult.length > 0 && (
+            {loading && (
+              <View style={styles.searchLoadingContainer}>
+                <Spinner />
+              </View>
+            )}
+
+            {!loading && searchText.trim().length >= 2 && searchResult.length === 0 && (
+              <EmptyState
+                compact
+                title="لا توجد نتائج"
+                subtitle="جرّب كلمات بحث مختلفة"
+              />
+            )}
+
+            {!loading && searchResult.length > 0 && (
               <View style={styles.searchResultContainer}>
-                {loading ? (
-                  <Spinner></Spinner>
-                ) : (
-                  searchResult.map((store) => (
-                    <Pressable
-                      key={store.id}
-                      onPress={() => router.navigate(`/store/${store.id}`)}
-                    >
-                      <View style={styles.searchResultRow}>
-                        <Image
-                          source={{ uri: store.logo }}
-                          style={styles.searchResultImage}
-                        ></Image>
-                        <Text category="s2" style={styles.searchResultText}>
-                          {store.name}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))
-                )}
+                {searchResult.map((store) => (
+                  <Pressable
+                    key={store.id}
+                    onPress={() => router.navigate(`/store/${store.id}`)}
+                  >
+                    <View style={styles.searchResultRow}>
+                      <Image
+                        source={{ uri: store.logo }}
+                        contentFit="cover"
+                        placeholder={{ blurhash: IMAGE_BLURHASH }}
+                        transition={IMAGE_TRANSITION_MS}
+                        style={styles.searchResultImage}
+                      />
+                      <Text category="s2" style={styles.searchResultText}>
+                        {store.name}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
               </View>
             )}
 
@@ -159,6 +175,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
     gap: 8,
+  },
+  searchLoadingContainer: {
+    paddingVertical: 16,
+    alignItems: "center",
   },
   searchResultRow: {
     flexDirection: "row",

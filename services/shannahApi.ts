@@ -11,7 +11,7 @@
  *   - notification.service.js — push tokens, notifications
  */
 
-export { login, sendOtp, verifyOtp, signUp, verifyEmailOtp, profileComplete, getUserInfo, updateUserInfo } from "./auth.service";
+export { login, logout, sendOtp, verifyOtp, signUp, verifyEmailOtp, profileComplete, getUserInfo, updateUserInfo } from "./auth.service";
 export { getStores, getProduct, search, searchTags, getPlatformSettings } from "./store.service";
 export { submitOrder, orderDetails, getOrders, applyCoupon, submitReview } from "./order.service";
 export { saveOrUpdateAddress, saveAddress, getAddresses, getAddress, deleteAddress } from "./address.service";
