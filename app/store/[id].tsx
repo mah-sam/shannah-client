@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { Layout, Spinner, Tab, TabView, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ArrowRightIcon,
@@ -15,8 +15,11 @@ import {
 import { ProductsList } from "../../components/StoreComponents";
 import { AnimatedFavoriteButton } from "../../components/ui/AnimatedFavoriteButton";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
+import { ShannahImage } from "../../components/ui/ShannahImage";
 import { useGlobal } from "../../context/GlobalContext";
+import { useDeliveryReference } from "../../hooks/useDeliveryReference";
+import { formatDistanceKm, haversineKm } from "../../utils/distance";
+import { computeEtaRange, formatEtaRange } from "../../utils/eta";
 import useAuth from "../../hooks/useAuth";
 import { getStores, toggleFavorite } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
@@ -29,6 +32,15 @@ const Store = () => {
   const [storeDataLoaded, setStoreDataLoaded] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const reference = useDeliveryReference();
+  const distanceKm = reference && store?.latitude != null && store?.longitude != null
+    ? haversineKm(reference, { latitude: store.latitude, longitude: store.longitude })
+    : null;
+  const etaRange = computeEtaRange(store?.base_prep_time_minutes, distanceKm);
+  const etaLabel = formatEtaRange(etaRange) || store?.delivery_time || "";
+  const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
+  const outOfRange = distanceKm != null && store?.max_delivery_radius_km != null
+    && distanceKm > store.max_delivery_radius_km;
 
   const handleToggleFavorite = async () => {
     if (!token) return;
@@ -62,13 +74,9 @@ const Store = () => {
             <>
               <View style={{ gap: 16 }}>
                 <View style={styles.coverContainer}>
-                  <Image
-                    source={{
-                      uri: store.cover,
-                    }}
-                    contentFit="cover"
-                    placeholder={{ blurhash: IMAGE_BLURHASH }}
-                    transition={IMAGE_TRANSITION_MS}
+                  <ShannahImage
+                    variant="store_cover"
+                    source={{ uri: store.cover }}
                     style={styles.coverImage}
                   />
                   <View style={styles.backButton}>
@@ -91,13 +99,9 @@ const Store = () => {
                     />
                   )}
                   <View style={styles.logoContainer}>
-                    <Image
-                      source={{
-                        uri: store.logo,
-                      }}
-                      contentFit="cover"
-                      placeholder={{ blurhash: IMAGE_BLURHASH }}
-                      transition={IMAGE_TRANSITION_MS}
+                    <ShannahImage
+                      variant="store_logo"
+                      source={{ uri: store.logo }}
                       style={styles.logoImage}
                     />
                   </View>
@@ -119,20 +123,22 @@ const Store = () => {
                   )}
                   <ScrollView horizontal={true}>
                     <View style={styles.storeInfo}>
-                      <View style={styles.distanceContainer}>
-                        <DistanceIcon
-                          style={styles.distanceIcon}
-                        ></DistanceIcon>
-                        <Text
-                          style={styles.storeInfoText}
-                        >{`${store.max_delivery_radius_km} كم`}</Text>
-                      </View>
-                      <View style={styles.deliveryTimeContainer}>
-                        <ClockIcon style={styles.clockIcon}></ClockIcon>
-                        <Text style={styles.storeInfoText}>
-                          {store.delivery_time}
-                        </Text>
-                      </View>
+                      {distanceLabel ? (
+                        <View style={styles.distanceContainer}>
+                          <DistanceIcon
+                            style={styles.distanceIcon}
+                          ></DistanceIcon>
+                          <Text style={styles.storeInfoText}>
+                            {distanceLabel}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {etaLabel ? (
+                        <View style={styles.deliveryTimeContainer}>
+                          <ClockIcon style={styles.clockIcon}></ClockIcon>
+                          <Text style={styles.storeInfoText}>{etaLabel}</Text>
+                        </View>
+                      ) : null}
                       <Text style={styles.storeInfoText}>|</Text>
                       <View style={styles.minOrderContainer}>
                         <Text style={styles.storeInfoText}>
@@ -149,8 +155,57 @@ const Store = () => {
                       </View>
                     </View>
                   </ScrollView>
+                  {outOfRange ? (
+                    <View style={styles.outOfRangeBadge}>
+                      <Text style={styles.outOfRangeText}>
+                        خارج نطاق التوصيل
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
+              {store?.latitude != null && store?.longitude != null ? (
+                <View style={styles.mapSectionContainer}>
+                  <View style={styles.mapSectionHeader}>
+                    <Text category="s1" style={styles.mapSectionTitle}>
+                      موقع المتجر
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        const url = Platform.select({
+                          ios: `maps:0,0?q=${store.latitude},${store.longitude}`,
+                          android: `geo:0,0?q=${store.latitude},${store.longitude}(${encodeURIComponent(store.name)})`,
+                        });
+                        if (url) Linking.openURL(url);
+                      }}
+                    >
+                      <Text style={styles.mapSectionLink}>فتح في الخرائط</Text>
+                    </Pressable>
+                  </View>
+                  <MapView
+                    style={styles.mapView}
+                    pointerEvents="none"
+                    initialRegion={{
+                      latitude: Number(store.latitude),
+                      longitude: Number(store.longitude),
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    pitchEnabled={false}
+                    rotateEnabled={false}
+                  >
+                    <Marker
+                      coordinate={{
+                        latitude: Number(store.latitude),
+                        longitude: Number(store.longitude),
+                      }}
+                      title={store.name}
+                    />
+                  </MapView>
+                </View>
+              ) : null}
               <View style={styles.tabsContainer}>
                 {Object.keys(store?.products ?? {}).length > 0 ? (
                   <TabView
@@ -284,6 +339,44 @@ const styles = StyleSheet.create({
     color: theme["text-body-color"],
     textAlign: "left",
     fontSize: 12,
+  },
+  outOfRangeBadge: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+  },
+  outOfRangeText: {
+    fontFamily: "TajawalMedium",
+    fontSize: 12,
+    color: "#B91C1C",
+  },
+  mapSectionContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: 8,
+  },
+  mapSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  mapSectionTitle: {
+    color: theme["text-heading-color"],
+    fontFamily: "TajawalBold",
+    textAlign: "left",
+  },
+  mapSectionLink: {
+    color: theme["color-primary-500"],
+    fontFamily: "TajawalMedium",
+  },
+  mapView: {
+    width: "100%",
+    height: 140,
+    borderRadius: 12,
+    overflow: "hidden",
   },
   storeInfo: {
     flexDirection: "row",

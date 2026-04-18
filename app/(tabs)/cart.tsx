@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
@@ -8,7 +7,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { PlusCircleIcon, SarIcon, TrashIcon } from "../../components/Icons";
 import AlertDialog from "../../components/ui/AlertDialog";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
+import { ShannahImage } from "../../components/ui/ShannahImage";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import useCart from "../../hooks/useCart";
@@ -84,13 +83,11 @@ const Cart = () => {
                   <View key={storeId} style={styles.storeCard}>
                     <View style={styles.storeCardHeader}>
                       <View style={styles.storeInfoContainer}>
-                        <Image
+                        <ShannahImage
+                          variant="store_logo"
                           source={{
                             uri: getStoreInfo(productType, storeId)?.logo,
                           }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
                           style={styles.storeLogo}
                         />
                         <View style={styles.storeInfo}>
@@ -111,14 +108,10 @@ const Cart = () => {
 
                     <View style={styles.productsContainer}>
                       {cartItems[productType][storeId].map((product) => (
-                        <Image
+                        <ShannahImage
                           key={product.id}
-                          source={{
-                            uri: product.image,
-                          }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
+                          variant="product"
+                          source={{ uri: product.image }}
                           style={styles.productImage}
                         />
                       ))}

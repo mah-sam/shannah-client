@@ -11,7 +11,6 @@ import {
 } from "@ui-kitten/components";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image } from "expo-image";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,7 +19,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "../components/ui/ShannahImage";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ArrowRightIcon,
@@ -211,13 +210,9 @@ const Product = () => {
             {productDataLoaded ? (
               <>
                 <View style={styles.productCover}>
-                  <Image
-                    source={{
-                      uri: product.image,
-                    }}
-                    contentFit="cover"
-                    placeholder={{ blurhash: IMAGE_BLURHASH }}
-                    transition={IMAGE_TRANSITION_MS}
+                  <ShannahImage
+                    variant="product"
+                    source={{ uri: product.image }}
                     style={styles.productImage}
                   />
                   <View style={styles.backButton}>

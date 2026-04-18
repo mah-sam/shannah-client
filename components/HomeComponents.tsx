@@ -1,14 +1,16 @@
 // @ts-nocheck
 import { Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "./ui/ShannahImage";
 import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
+import { useDeliveryReference } from "../hooks/useDeliveryReference";
 import { toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
+import { formatDistanceKm, haversineKm } from "../utils/distance";
+import { computeEtaRange, formatEtaRange } from "../utils/eta";
 import { shareStore } from "../utils/shareStore";
 import {
   ClockIcon,
@@ -42,6 +44,15 @@ export const StoresList = ({ items, onFavoriteToggle }) => {
 export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
   const { token } = useAuth();
   const [isFavorite, setIsFavorite] = useState(store.is_favorite);
+  const reference = useDeliveryReference();
+  const distanceKm = reference && store?.latitude != null && store?.longitude != null
+    ? haversineKm(reference, { latitude: store.latitude, longitude: store.longitude })
+    : null;
+  const etaRange = computeEtaRange(store?.base_prep_time_minutes, distanceKm);
+  const etaLabel = formatEtaRange(etaRange) || store?.delivery_time || "";
+  const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
+  const outOfRange = distanceKm != null && store?.max_delivery_radius_km != null
+    && distanceKm > store.max_delivery_radius_km;
 
   useEffect(() => {
     setIsFavorite(store.is_favorite);
@@ -74,11 +85,9 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
             backgroundColor={theme["color-basic-100"]}
           />
         </View>
-        <Image
+        <ShannahImage
+          variant="store_cover"
           source={{ uri: store.cover }}
-          contentFit="cover"
-          placeholder={{ blurhash: IMAGE_BLURHASH }}
-          transition={IMAGE_TRANSITION_MS}
           style={styles.storeCardImage}
         />
         <View style={styles.storeCardRow}>
@@ -92,20 +101,22 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
         </View>
         <View style={styles.storeCardRow}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <ClockIcon style={{ width: 20, height: 20 }}></ClockIcon>
-              <Text style={styles.storeCardText}>{store.delivery_time}</Text>
-            </View>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <DistanceIcon style={{ width: 20, height: 20 }}></DistanceIcon>
-              <Text
-                style={styles.storeCardText}
-              >{`${store.max_delivery_radius_km} كم`}</Text>
-            </View>
+            {etaLabel ? (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <ClockIcon style={{ width: 20, height: 20 }}></ClockIcon>
+                <Text style={styles.storeCardText}>{etaLabel}</Text>
+              </View>
+            ) : null}
+            {distanceLabel ? (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <DistanceIcon style={{ width: 20, height: 20 }}></DistanceIcon>
+                <Text style={styles.storeCardText}>{distanceLabel}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text
@@ -114,6 +125,11 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
             <SarIcon style={{ width: 16, height: 16 }}></SarIcon>
           </View>
         </View>
+        {outOfRange ? (
+          <View style={styles.outOfRangeBadge}>
+            <Text style={styles.outOfRangeText}>خارج نطاق التوصيل</Text>
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -128,6 +144,15 @@ export const StoreCard = ({
   const { signedIn } = useGlobal();
   const { token } = useAuth();
   const [isFavorite, setIsFavorite] = useState(item.is_favorite);
+  const reference = useDeliveryReference();
+  const distanceKm = reference && item?.latitude != null && item?.longitude != null
+    ? haversineKm(reference, { latitude: item.latitude, longitude: item.longitude })
+    : null;
+  const etaRange = computeEtaRange(item?.base_prep_time_minutes, distanceKm);
+  const etaLabel = formatEtaRange(etaRange) || item?.delivery_time || "";
+  const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
+  const outOfRange = distanceKm != null && item?.max_delivery_radius_km != null
+    && distanceKm > item.max_delivery_radius_km;
 
   useEffect(() => {
     setIsFavorite(item.is_favorite);
@@ -191,11 +216,9 @@ export const StoreCard = ({
             <ShareIcon style={styles.shareIcon}></ShareIcon>
           </Pressable>
         </View>
-        <Image
+        <ShannahImage
+          variant="store_cover"
           source={{ uri: item.cover }}
-          contentFit="cover"
-          placeholder={{ blurhash: IMAGE_BLURHASH }}
-          transition={IMAGE_TRANSITION_MS}
           style={styles.storeCardImage}
         />
         <View style={styles.storeCardRow}>
@@ -216,20 +239,22 @@ export const StoreCard = ({
         )}
         <View style={styles.storeCardRow}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <ClockIcon style={{ width: 20, height: 20 }}></ClockIcon>
-              <Text style={styles.storeCardText}>{item.delivery_time}</Text>
-            </View>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <DistanceIcon style={{ width: 20, height: 20 }}></DistanceIcon>
-              <Text
-                style={styles.storeCardText}
-              >{`${item.max_delivery_radius_km} كم`}</Text>
-            </View>
+            {etaLabel ? (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <ClockIcon style={{ width: 20, height: 20 }}></ClockIcon>
+                <Text style={styles.storeCardText}>{etaLabel}</Text>
+              </View>
+            ) : null}
+            {distanceLabel ? (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <DistanceIcon style={{ width: 20, height: 20 }}></DistanceIcon>
+                <Text style={styles.storeCardText}>{distanceLabel}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text
@@ -238,6 +263,11 @@ export const StoreCard = ({
             <SarIcon style={{ width: 16, height: 16 }}></SarIcon>
           </View>
         </View>
+        {outOfRange ? (
+          <View style={styles.outOfRangeBadge}>
+            <Text style={styles.outOfRangeText}>خارج نطاق التوصيل</Text>
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -316,6 +346,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme["text-body-color"],
     textAlign: "left",
+  },
+  outOfRangeBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+  },
+  outOfRangeText: {
+    fontFamily: "TajawalMedium",
+    fontSize: 11,
+    color: "#B91C1C",
   },
   starIcon: {
     width: 16,

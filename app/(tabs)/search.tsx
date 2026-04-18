@@ -1,13 +1,12 @@
 // @ts-nocheck
 import { Button, Input, Layout, Spinner, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SearchIcon } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../../constants/images";
+import { ShannahImage } from "../../components/ui/ShannahImage";
 import { search, searchTags } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
@@ -96,11 +95,9 @@ const Search = () => {
                     onPress={() => router.navigate(`/store/${store.id}`)}
                   >
                     <View style={styles.searchResultRow}>
-                      <Image
+                      <ShannahImage
+                        variant="store_logo"
                         source={{ uri: store.logo }}
-                        contentFit="cover"
-                        placeholder={{ blurhash: IMAGE_BLURHASH }}
-                        transition={IMAGE_TRANSITION_MS}
                         style={styles.searchResultImage}
                       />
                       <Text category="s2" style={styles.searchResultText}>

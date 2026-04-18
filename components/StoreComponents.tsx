@@ -1,10 +1,9 @@
 // @ts-nocheck
 import { Icon, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { memo, useCallback } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "./ui/ShannahImage";
 import * as theme from "../theme.json";
 
 export const PlusIcon = (props) => (
@@ -50,11 +49,9 @@ export const ProductsList = ({ store, items }) => {
             </Text>
           </View>
           <View style={styles.productImageContainer}>
-            <Image
+            <ShannahImage
+              variant="product"
               source={{ uri: item.image }}
-              contentFit="cover"
-              placeholder={{ blurhash: IMAGE_BLURHASH }}
-              transition={IMAGE_TRANSITION_MS}
               style={styles.productImage}
             />
             <View style={styles.addButton}>

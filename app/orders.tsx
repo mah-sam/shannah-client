@@ -1,13 +1,12 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "../components/ui/ShannahImage";
 import useAuth from "../hooks/useAuth";
 import { getOrders, submitReview } from "../services/shannahApi";
 import * as theme from "../theme.json";
@@ -86,11 +85,9 @@ export default function Orders() {
                   <View key={order.id} style={styles.orderCard}>
                     <View style={styles.orderCardHeader}>
                       <View style={styles.storeContainer}>
-                        <Image
+                        <ShannahImage
+                          variant="store_logo"
                           source={{ uri: order.store.logo }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
                         />
                         <View style={{ justifyContent: "space-between" }}>
@@ -114,12 +111,10 @@ export default function Orders() {
                       contentContainerStyle={styles.products}
                     >
                       {order.items.map((product) => (
-                        <Image
+                        <ShannahImage
                           key={product.product_id}
+                          variant="product"
                           source={{ uri: product.image }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
                         />
                       ))}
@@ -150,11 +145,9 @@ export default function Orders() {
                   <View key={order.id} style={styles.orderCard}>
                     <View style={styles.orderCardHeader}>
                       <View style={styles.storeContainer}>
-                        <Image
+                        <ShannahImage
+                          variant="store_logo"
                           source={{ uri: order.store.logo }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
                         />
                         <View style={{ justifyContent: "space-between" }}>
@@ -176,12 +169,10 @@ export default function Orders() {
                       contentContainerStyle={styles.products}
                     >
                       {order.items.map((product) => (
-                        <Image
+                        <ShannahImage
                           key={product.product_id}
+                          variant="product"
                           source={{ uri: product.image }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
                           style={styles.thumbnail}
                         />
                       ))}

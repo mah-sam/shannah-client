@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { OrderAgainCard, StoresList } from "../../components/HomeComponents";
@@ -14,10 +14,14 @@ import {
   SearchIcon,
 } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { FilterSheet } from "../../components/ui/FilterSheet";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
+import { useDeliveryReference } from "../../hooks/useDeliveryReference";
 import { getOrders, getStores } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
+import { haversineKm } from "../../utils/distance";
+import { computeEtaRange, etaMidpoint } from "../../utils/eta";
 
 export default function HomeScreen() {
   const { signedIn, deliveryAddress } = useGlobal();
@@ -34,6 +38,70 @@ export default function HomeScreen() {
   });
   const [productType, setProductType] = useState("meal");
   const [loading, setLoading] = useState(true);
+  const [minRating, setMinRating] = useState(null);
+  const [maxDistanceKm, setMaxDistanceKm] = useState(null);
+  const [sortBy, setSortBy] = useState("relevance");
+  const [sheetOpen, setSheetOpen] = useState(null); // "rating" | "distance" | "sort"
+  const reference = useDeliveryReference();
+
+  const displayedStores = useMemo(() => {
+    let arr = stores?.[productType] ?? [];
+    if (minRating != null) {
+      arr = arr.filter((s) => (Number(s.rating) || 0) >= minRating);
+    }
+    if (maxDistanceKm != null && reference) {
+      arr = arr.filter((s) => {
+        if (s.latitude == null || s.longitude == null) return false;
+        const d = haversineKm(reference, {
+          latitude: s.latitude,
+          longitude: s.longitude,
+        });
+        return d <= maxDistanceKm;
+      });
+    }
+    const withMetrics = arr.map((s) => {
+      const hasCoords =
+        reference && s.latitude != null && s.longitude != null;
+      const dist = hasCoords
+        ? haversineKm(reference, {
+            latitude: s.latitude,
+            longitude: s.longitude,
+          })
+        : null;
+      const eta = computeEtaRange(s.base_prep_time_minutes, dist);
+      return { s, dist, etaMid: etaMidpoint(eta) };
+    });
+    switch (sortBy) {
+      case "rating":
+        withMetrics.sort(
+          (a, b) => (Number(b.s.rating) || 0) - (Number(a.s.rating) || 0),
+        );
+        break;
+      case "distance":
+        withMetrics.sort(
+          (a, b) =>
+            (a.dist ?? Number.MAX_SAFE_INTEGER) -
+            (b.dist ?? Number.MAX_SAFE_INTEGER),
+        );
+        break;
+      case "eta":
+        withMetrics.sort((a, b) => a.etaMid - b.etaMid);
+        break;
+    }
+    return withMetrics.map((x) => x.s);
+  }, [stores, productType, minRating, maxDistanceKm, sortBy, reference]);
+
+  const filtersActive =
+    minRating != null || maxDistanceKm != null || sortBy !== "relevance";
+
+  const clearFilters = () => {
+    setMinRating(null);
+    setMaxDistanceKm(null);
+    setSortBy("relevance");
+  };
+
+  const arabicNum = (n) =>
+    String(n).replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
 
   const handleFavoriteToggle = (storeId, isFavorited) => {
     // Update pastOrdersStores
@@ -199,51 +267,72 @@ export default function HomeScreen() {
             >
               <Button
                 appearance="outline"
-                status="basic"
+                status={minRating != null ? "primary" : "basic"}
                 size="small"
                 accessoryLeft={() => (
                   <ArrowDropdownIcon
                     style={styles.arrowDropdownIcon}
                   ></ArrowDropdownIcon>
                 )}
-                style={styles.filterChip}
+                style={[
+                  styles.filterChip,
+                  minRating != null && styles.filterChipActive,
+                ]}
+                onPress={() => setSheetOpen("rating")}
               >
                 <View>
-                  <Text style={styles.filterChipText}>تقييم المنتج</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      minRating != null && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {minRating != null
+                      ? `تقييم ${arabicNum(minRating)}+`
+                      : "التقييم"}
+                  </Text>
                 </View>
               </Button>
               <Button
                 appearance="outline"
-                status="basic"
+                status={maxDistanceKm != null ? "primary" : "basic"}
                 size="small"
                 accessoryLeft={() => (
                   <ArrowDropdownIcon
                     style={styles.arrowDropdownIcon}
                   ></ArrowDropdownIcon>
                 )}
-                style={styles.filterChip}
+                style={[
+                  styles.filterChip,
+                  maxDistanceKm != null && styles.filterChipActive,
+                ]}
+                onPress={() => setSheetOpen("distance")}
               >
                 <View>
-                  <Text style={styles.filterChipText}>نوع المنتج</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      maxDistanceKm != null && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {maxDistanceKm != null
+                      ? `خلال ${arabicNum(maxDistanceKm)} كم`
+                      : "المسافة"}
+                  </Text>
                 </View>
               </Button>
-              <Button
-                appearance="outline"
-                status="basic"
-                size="small"
-                accessoryLeft={() => (
-                  <ArrowDropdownIcon
-                    style={styles.arrowDropdownIcon}
-                  ></ArrowDropdownIcon>
-                )}
-                style={styles.filterChip}
+              <Pressable
+                onPress={() => setSheetOpen("sort")}
+                style={styles.funnelPressable}
               >
-                <View>
-                  <Text style={styles.filterChipText}>الموقع</Text>
-                </View>
-              </Button>
-              <Pressable>
-                <FilterFunnelIcon style={styles.filterFunnelIcon} />
+                <FilterFunnelIcon
+                  style={[
+                    styles.filterFunnelIcon,
+                    sortBy !== "relevance" && {
+                      tintColor: theme["color-primary-500"],
+                    },
+                  ]}
+                />
               </Pressable>
             </ScrollView>
 
@@ -273,25 +362,88 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {!loading && (stores?.[productType]?.length ?? 0) > 0 && (
+            {!loading && displayedStores.length > 0 && (
               <View style={styles.storesContainer}>
                 <Text category="h3" style={styles.title}>
                   استكشف المتاجر
                 </Text>
                 <StoresList
-                  items={stores[productType]}
+                  items={displayedStores}
                   onFavoriteToggle={handleFavoriteToggle}
                 />
               </View>
             )}
 
-            {!loading && (stores?.[productType]?.length ?? 0) === 0 && (
-              <EmptyState
-                title="لا توجد متاجر في هذه الفئة بعد"
-                subtitle="جرّب فئة أخرى، نضيف متاجر جديدة باستمرار"
-              />
-            )}
+            {!loading &&
+              displayedStores.length === 0 &&
+              (stores?.[productType]?.length ?? 0) > 0 &&
+              filtersActive && (
+                <View>
+                  <EmptyState
+                    title="لا توجد نتائج مطابقة للفلاتر"
+                    subtitle="عدّل الفلاتر أو امسحها للعرض الكامل"
+                  />
+                  <View style={styles.clearFiltersWrapper}>
+                    <Button
+                      appearance="outline"
+                      status="basic"
+                      onPress={clearFilters}
+                    >
+                      {() => (
+                        <Text style={styles.clearFiltersText}>مسح الفلاتر</Text>
+                      )}
+                    </Button>
+                  </View>
+                </View>
+              )}
+
+            {!loading &&
+              displayedStores.length === 0 &&
+              (stores?.[productType]?.length ?? 0) === 0 && (
+                <EmptyState
+                  title="لا توجد متاجر في هذه الفئة بعد"
+                  subtitle="جرّب فئة أخرى، نضيف متاجر جديدة باستمرار"
+                />
+              )}
           </ScrollView>
+          <FilterSheet
+            visible={sheetOpen === "rating"}
+            title="الحد الأدنى للتقييم"
+            options={[
+              { label: "أي تقييم", value: null },
+              { label: "٤ نجوم فأعلى", value: 4 },
+              { label: "٤٫٥ نجوم فأعلى", value: 4.5 },
+            ]}
+            value={minRating}
+            onSelect={setMinRating}
+            onClose={() => setSheetOpen(null)}
+          />
+          <FilterSheet
+            visible={sheetOpen === "distance"}
+            title="أقصى مسافة"
+            options={[
+              { label: "أي مسافة", value: null },
+              { label: "خلال ٥ كم", value: 5 },
+              { label: "خلال ١٠ كم", value: 10 },
+              { label: "خلال ٢٠ كم", value: 20 },
+            ]}
+            value={maxDistanceKm}
+            onSelect={setMaxDistanceKm}
+            onClose={() => setSheetOpen(null)}
+          />
+          <FilterSheet
+            visible={sheetOpen === "sort"}
+            title="الترتيب"
+            options={[
+              { label: "الأنسب", value: "relevance" },
+              { label: "الأعلى تقييماً", value: "rating" },
+              { label: "الأقرب مسافة", value: "distance" },
+              { label: "الأسرع توصيلاً", value: "eta" },
+            ]}
+            value={sortBy}
+            onSelect={(v) => setSortBy(v ?? "relevance")}
+            onClose={() => setSheetOpen(null)}
+          />
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -426,12 +578,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 32,
   },
+  filterChipActive: {
+    borderColor: theme["color-primary-500"],
+    backgroundColor: theme["color-primary-25"],
+  },
   filterChipText: {
     justifyContent: "center",
     alignItems: "center",
     lineHeight: 14,
     fontFamily: "TajawalMedium",
     fontSize: 14,
+  },
+  filterChipTextActive: {
+    color: theme["color-primary-500"],
+  },
+  funnelPressable: {
+    paddingHorizontal: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearFiltersWrapper: {
+    alignItems: "center",
+    paddingBottom: 24,
+  },
+  clearFiltersText: {
+    color: theme["text-heading-color"],
+    fontFamily: "TajawalMedium",
   },
   arrowDropdownIcon: {
     width: 24,

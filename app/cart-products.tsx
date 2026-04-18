@@ -2,9 +2,8 @@
 import { Button, Layout, Text } from "@ui-kitten/components";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "../components/ui/ShannahImage";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { MinusIcon, PlusIcon, SarIcon, TrashIcon } from "../components/Icons";
 import AlertDialog from "../components/ui/AlertDialog";
@@ -118,13 +117,9 @@ const CartProducts = () => {
                   {(cartItems[productType][storeId] ?? []).map(
                     (product, index) => (
                       <View key={product.id} style={styles.productContainer}>
-                        <Image
-                          source={{
-                            uri: product.image,
-                          }}
-                          contentFit="cover"
-                          placeholder={{ blurhash: IMAGE_BLURHASH }}
-                          transition={IMAGE_TRANSITION_MS}
+                        <ShannahImage
+                          variant="product"
+                          source={{ uri: product.image }}
                           style={styles.productImage}
                         />
                         <View style={styles.productNameAndQtyContainer}>

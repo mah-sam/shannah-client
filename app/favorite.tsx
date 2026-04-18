@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { Button, Layout, Text } from "@ui-kitten/components";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -8,7 +7,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { StoreCard } from "../components/HomeComponents";
 import { HeartFilledIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
-import { IMAGE_BLURHASH, IMAGE_TRANSITION_MS } from "../constants/images";
+import { ShannahImage } from "../components/ui/ShannahImage";
 import useAuth from "../hooks/useAuth";
 import { getFavorites, toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
@@ -44,11 +43,9 @@ export default function Favorite() {
       <View style={styles.productCard}>
         <View style={styles.productContainer}>
           <View style={styles.product}>
-            <Image
+            <ShannahImage
+              variant="product"
               source={{ uri: product.image }}
-              contentFit="cover"
-              placeholder={{ blurhash: IMAGE_BLURHASH }}
-              transition={IMAGE_TRANSITION_MS}
               style={styles.productImage}
             />
             <View style={styles.productDetails}>

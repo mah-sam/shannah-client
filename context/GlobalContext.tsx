@@ -1,8 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { deleteItemAsync, getItemAsync } from "expo-secure-store";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Platform } from "react-native";
 import {
   logout,
@@ -11,6 +19,11 @@ import {
 } from "../services/shannahApi";
 
 const EXPO_PROJECT_ID = "9c2a2e5c-bbc2-416a-90e4-bd8679dcd07a";
+
+export interface UserLocation {
+  latitude: number;
+  longitude: number;
+}
 
 interface GlobalContextValue {
   cartItems: unknown;
@@ -22,6 +35,8 @@ interface GlobalContextValue {
   signOut: () => Promise<void>;
   deliveryAddress: any;
   setDeliveryAddress: (addr: any) => void;
+  userLocation: UserLocation | null;
+  refreshUserLocation: () => Promise<void>;
 }
 
 const GlobalContext = createContext<GlobalContextValue | null>(null);
@@ -37,6 +52,30 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   const [signedIn, setSignedIn] = useState(false);
   const [userData, setUserData] = useState<any>({});
   const [deliveryAddress, setDeliveryAddress] = useState<any>({});
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+
+  const refreshUserLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setUserLocation(null);
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setUserLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch (e) {
+      console.log("refreshUserLocation:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUserLocation();
+  }, [refreshUserLocation]);
 
   useEffect(() => {
     (async () => {
@@ -159,6 +198,8 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
         signOut,
         deliveryAddress,
         setDeliveryAddress,
+        userLocation,
+        refreshUserLocation,
       }}
     >
       {children}
