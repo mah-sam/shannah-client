@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import { AppState, Platform } from "react-native";
+import { realtimeService } from "../services/realtime.service";
 import {
   logout,
   registerPushToken,
@@ -120,6 +121,28 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Connect / disconnect the realtime service in lockstep with auth state.
+  // Reverb uses the Sanctum bearer token to authorize private channels, so the
+  // token must be fresh every time we (re)connect.
+  useEffect(() => {
+    if (!signedIn) {
+      realtimeService.disconnect();
+      return;
+    }
+    (async () => {
+      try {
+        const authToken = await getItemAsync("token");
+        realtimeService.connect(authToken);
+      } catch {
+        // Realtime is best-effort; polling fallback (pull-to-refresh) still works.
+      }
+    })();
+    return () => {
+      // Leave the connection up across re-renders; only tear down on sign-out
+      // or unmount, both of which run the if(!signedIn) branch above.
+    };
+  }, [signedIn]);
+
   useEffect(() => {
     if (!signedIn) return;
     (async () => {
@@ -198,6 +221,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
     await deleteItemAsync("token");
     await AsyncStorage.removeItem("user");
+    realtimeService.disconnect();
     setSignedIn(false);
     setUserData({});
     setCartItems({ meal: [], banquet: [] });

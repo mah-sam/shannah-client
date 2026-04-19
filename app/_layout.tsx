@@ -8,14 +8,17 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { AssetIconsPack } from "../asset-icons";
 import StackNavigator from "../components/StackNavigator";
+import { ErrorBoundary } from "../components/ui/ErrorBoundary";
 import { OfflineBanner } from "../components/ui/OfflineBanner";
 import { GlobalProvider } from "../context/GlobalContext";
 import { ToastProvider, useToast } from "../context/ToastContext";
 import { setSessionExpiredHandler } from "../services/api";
+import { initErrorReporting } from "../utils/errorReporting";
 import { default as mapping } from "../mapping.json";
 import { default as theme } from "../theme.json";
 
 SplashScreen.preventAutoHideAsync();
+initErrorReporting();
 
 // Show notifications as banners when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -64,7 +67,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <IconRegistry icons={[AssetIconsPack]} />
       <ApplicationProvider {...eva} theme={theme} customMapping={mapping}>
         <GlobalProvider>
@@ -76,7 +79,7 @@ export default function RootLayout() {
           </ToastProvider>
         </GlobalProvider>
       </ApplicationProvider>
-    </>
+    </ErrorBoundary>
   );
 }
 

@@ -98,19 +98,28 @@ export default function SignUp() {
 
   const handleSignUp = async () => {
     setIsSubmitting(true);
-    const result = await signUp({
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-      password: password,
-      password_confirmation: passwordConf,
-    });
+    let result;
+    try {
+      result = await signUp({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: password,
+        password_confirmation: passwordConf,
+      });
+    } catch {
+      setIsSubmitting(false);
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      return;
+    }
     setIsSubmitting(false);
 
     if (result?.errors !== undefined) {
       setErrors({ ...initErrors, ...result.errors });
-    } else if (result.next_step === "verify_email") {
+    } else if (result?.next_step === "verify_email") {
       setOtpSent(true);
+    } else if (result?.message) {
+      Alert.alert("خطأ", result.message);
     }
   };
 
@@ -132,9 +141,15 @@ export default function SignUp() {
       return;
     }
 
-    const data = await verifyEmailOtp(email, enteredOtp);
+    let data;
+    try {
+      data = await verifyEmailOtp(email, enteredOtp);
+    } catch {
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      return;
+    }
     if (data?.status !== true) {
-      Alert.alert("خطأ", data.message);
+      Alert.alert("خطأ", data?.message || "الرمز غير صحيح");
       return;
     }
 

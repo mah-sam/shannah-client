@@ -7,6 +7,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { PlusCircleIcon, SarIcon, TrashIcon } from "../../components/Icons";
 import AlertDialog from "../../components/ui/AlertDialog";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { ShannahImage } from "../../components/ui/ShannahImage";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
@@ -21,17 +22,25 @@ const Cart = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeProductType, setActiveProductType] = useState();
   const [activeStoreId, setActiveStoreId] = useState();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const result = await getStores(token);
-      setStores(result.data);
-      setLoading(false);
+      setLoadError(false);
+      try {
+        const result = await getStores(token);
+        setStores(result?.data ?? []);
+      } catch {
+        setLoadError(true);
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, [token]);
+  }, [token, reloadKey]);
 
   const getStoreInfo = (productType, storeId) => {
     return stores[productType]?.find((store) => store.id == storeId);
@@ -63,14 +72,22 @@ const Cart = () => {
             </View>
           )}
 
-          {!loading && cartIsEmpty && (
+          {!loading && loadError && (
+            <ErrorState
+              title="تعذّر تحميل السلة"
+              subtitle="تحقق من اتصالك بالإنترنت وحاول مجدداً"
+              onRetry={() => setReloadKey((k) => k + 1)}
+            />
+          )}
+
+          {!loading && !loadError && cartIsEmpty && (
             <EmptyState
               title="سلة التسوق فارغة"
               subtitle="أضف منتجات من المتاجر للمتابعة"
             />
           )}
 
-          {!loading && !cartIsEmpty && productTypes.map((productType) => {
+          {!loading && !loadError && !cartIsEmpty && productTypes.map((productType) => {
             const storeIds = Object.keys(cartItems[productType] || {});
             if (storeIds.length === 0) return null;
             const typeLabels = { meal: "الوجبات", banquet: "الولائم", market: "ماركت" };

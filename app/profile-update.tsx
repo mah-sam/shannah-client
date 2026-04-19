@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import { getUserInfo, updateUserInfo } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function ProfileUpdate() {
   const { token } = useAuth();
+  const { show: showToast } = useToast();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,13 +34,17 @@ export default function ProfileUpdate() {
   useEffect(() => {
     (async () => {
       if (token !== null) {
-        const result = await getUserInfo(token);
-        setFirstName(result.data.first_name);
-        setLastName(result.data.last_name);
-        setEmail(result.data.email);
+        try {
+          const result = await getUserInfo(token);
+          setFirstName(result?.data?.first_name ?? "");
+          setLastName(result?.data?.last_name ?? "");
+          setEmail(result?.data?.email ?? "");
+        } catch {
+          showToast({ kind: "error", message: "تعذّر تحميل بيانات الحساب" });
+        }
       }
     })();
-  }, [token]);
+  }, [token, showToast]);
 
   const SecureTextToggle = ({ target }) => {
     return (target === "password" && newPasswordSecureText) ||
@@ -67,19 +73,29 @@ export default function ProfileUpdate() {
 
   const onProfileUpdate = async () => {
     setIsSubmitting(true);
-    const result = await updateUserInfo(token, {
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-      password: newPassword === "" ? undefined : newPassword,
-      password_confirmation: passwordConf === "" ? undefined : passwordConf,
-    });
+    let result;
+    try {
+      result = await updateUserInfo(token, {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: newPassword === "" ? undefined : newPassword,
+        password_confirmation: passwordConf === "" ? undefined : passwordConf,
+      });
+    } catch {
+      setIsSubmitting(false);
+      showToast({ kind: "error", message: "تعذّر حفظ التغييرات، حاول مجدداً" });
+      return;
+    }
     setIsSubmitting(false);
 
-    if (result.errors) {
+    if (result?.errors) {
       setErrors({ ...initErrors, ...result.errors });
-    } else if (result.status) {
+    } else if (result?.status) {
+      showToast({ kind: "success", message: "تم حفظ التغييرات" });
       router.navigate("/(tabs)/profile");
+    } else {
+      showToast({ kind: "error", message: result?.message || "تعذّر حفظ التغييرات" });
     }
   };
 

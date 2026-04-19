@@ -2,7 +2,7 @@
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import BottomActionBar from "../components/ui/BottomActionBar";
 import useAuth from "../hooks/useAuth";
@@ -28,17 +28,26 @@ export default function ProfileComplete() {
 
   const onProfileUpdate = async () => {
     setIsSubmitting(true);
-    const result = await profileComplete(token, {
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-    });
+    let result;
+    try {
+      result = await profileComplete(token, {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+      });
+    } catch {
+      setIsSubmitting(false);
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      return;
+    }
     setIsSubmitting(false);
 
-    if (result.errors) {
+    if (result?.errors) {
       setErrors({ ...initErrors, ...result.errors });
-    } else if (result.status) {
+    } else if (result?.status) {
       router.push("/(tabs)");
+    } else if (result?.message) {
+      Alert.alert("خطأ", result.message);
     }
   };
 

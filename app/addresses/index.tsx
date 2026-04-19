@@ -7,25 +7,35 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { DistanceIcon, EditIcon, TrashIcon } from "../../components/Icons";
 import AlertDialog from "../../components/ui/AlertDialog";
 import BottomActionBar from "../../components/ui/BottomActionBar";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { useToast } from "../../context/ToastContext";
 import useAuth from "../../hooks/useAuth";
 import { deleteAddress, getAddresses } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
 export default function Index() {
   const { token } = useAuth();
+  const { show: showToast } = useToast();
   const [addresses, setAddresses] = useState([]);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       token &&
         (async () => {
-          const result = await getAddresses(token);
-          setAddresses(result.data);
+          setLoadError(false);
+          try {
+            const result = await getAddresses(token);
+            setAddresses(result?.data ?? []);
+          } catch {
+            setLoadError(true);
+          }
         })();
-    }, [token]),
+    }, [token, reloadKey]),
   );
 
   const handleDeletePress = (addressId, addressLabel) => {
@@ -37,14 +47,23 @@ export default function Index() {
     if (!addressToDelete) return;
 
     setIsDeleting(true);
-    const result = await deleteAddress(token, addressToDelete.id);
+    let result;
+    try {
+      result = await deleteAddress(token, addressToDelete.id);
+    } catch {
+      setIsDeleting(false);
+      showToast({ kind: "error", message: "تعذّر حذف العنوان، حاول مجدداً" });
+      return;
+    }
     setIsDeleting(false);
 
-    if (result.status) {
-      // Remove the deleted address from the list
+    if (result?.status) {
       setAddresses(addresses.filter((addr) => addr.id !== addressToDelete.id));
       setDeleteDialogVisible(false);
       setAddressToDelete(null);
+      showToast({ kind: "success", message: "تم حذف العنوان" });
+    } else {
+      showToast({ kind: "error", message: result?.message || "تعذّر حذف العنوان" });
     }
   };
 
@@ -63,10 +82,18 @@ export default function Index() {
             paddingBottom: insets?.bottom,
           }}
         >
-          <AddressesList
-            items={addresses}
-            onDeletePress={handleDeletePress}
-          ></AddressesList>
+          {loadError ? (
+            <ErrorState
+              title="تعذّر تحميل العناوين"
+              subtitle="تحقق من اتصالك بالإنترنت وحاول مجدداً"
+              onRetry={() => setReloadKey((k) => k + 1)}
+            />
+          ) : (
+            <AddressesList
+              items={addresses}
+              onDeletePress={handleDeletePress}
+            ></AddressesList>
+          )}
           <BottomActionBar>
             <Button onPress={() => router.navigate("/addresses/form")}>
               <View>

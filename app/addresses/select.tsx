@@ -7,6 +7,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { DistanceIcon, EditIcon } from "../../components/Icons";
 import BottomActionBar from "../../components/ui/BottomActionBar";
 import { useGlobal } from "../../context/GlobalContext";
+import { useToast } from "../../context/ToastContext";
 import useAuth from "../../hooks/useAuth";
 import { getAddresses } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
@@ -14,6 +15,7 @@ import * as theme from "../../theme.json";
 export default function Select() {
   const { setDeliveryAddress } = useGlobal();
   const { token } = useAuth();
+  const { show: showToast } = useToast();
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
 
@@ -21,10 +23,14 @@ export default function Select() {
     useCallback(() => {
       token &&
         (async () => {
-          const result = await getAddresses(token);
-          setAddresses(result.data);
+          try {
+            const result = await getAddresses(token);
+            setAddresses(result?.data ?? []);
+          } catch {
+            showToast({ kind: "error", message: "تعذّر تحميل العناوين" });
+          }
         })();
-    }, [token]),
+    }, [token, showToast]),
   );
 
   const onConfirmAddress = () => {

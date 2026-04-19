@@ -12,6 +12,7 @@ import axios from "axios";
 import { router } from "expo-router";
 import { deleteItemAsync } from "expo-secure-store";
 import { Alert } from "react-native";
+import { addBreadcrumb, captureException } from "../utils/errorReporting";
 
 export const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -32,11 +33,24 @@ export function setSessionExpiredHandler(fn: SessionExpiredHandler | null) {
 
 let sessionExpiredFired = false;
 
-// Response interceptor to handle 401/403 codes
+// Response interceptor to handle 401/403 codes + forward failures to error reporting
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const code = error.response?.data?.code;
+    const status = error.response?.status;
+    const url = error.config?.url;
+
+    // Log a breadcrumb for every failure; unexpected 5xx get captured as
+    // exceptions so we have backend-facing reliability signals.
+    addBreadcrumb({
+      category: "api",
+      message: `${error.config?.method?.toUpperCase?.() ?? "REQ"} ${url ?? ""} → ${status ?? "network"}`,
+      data: { code },
+    });
+    if (status && status >= 500) {
+      captureException(error, { category: "api", url, status });
+    }
 
     if (error.response?.status === 401) {
       if (!sessionExpiredFired) {

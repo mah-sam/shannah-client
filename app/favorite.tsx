@@ -7,25 +7,35 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { StoreCard } from "../components/HomeComponents";
 import { HeartFilledIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
+import { ErrorState } from "../components/ui/ErrorState";
 import { ShannahImage } from "../components/ui/ShannahImage";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import { getFavorites, toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function Favorite() {
   const { token } = useAuth();
+  const { show: showToast } = useToast();
   const [favorites, setFavorites] = useState([]);
   const [refresh, setRefresh] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     (token || refresh) &&
       (async () => {
         setLoading(true);
-        const result = await getFavorites(token);
-        setFavorites(result.data);
-        setRefresh(false);
-        setLoading(false);
+        setLoadError(false);
+        try {
+          const result = await getFavorites(token);
+          setFavorites(result?.data ?? { stores: [], meals: [] });
+        } catch {
+          setLoadError(true);
+        } finally {
+          setRefresh(false);
+          setLoading(false);
+        }
       })();
   }, [token, refresh]);
 
@@ -34,8 +44,12 @@ export default function Favorite() {
     (favorites?.meals?.length ?? 0) > 0;
 
   const handleToggleFavorite = async (type, id) => {
-    await toggleFavorite(token, type, id);
-    setRefresh(true);
+    try {
+      await toggleFavorite(token, type, id);
+      setRefresh(true);
+    } catch {
+      showToast({ kind: "error", message: "تعذّر تحديث المفضلة" });
+    }
   };
 
   const ProductCard = ({ product }) => {
@@ -93,14 +107,22 @@ export default function Favorite() {
             </View>
           )}
 
-          {!loading && !hasFavorites && (
+          {!loading && loadError && (
+            <ErrorState
+              title="تعذّر تحميل المفضلة"
+              subtitle="تحقق من اتصالك بالإنترنت وحاول مجدداً"
+              onRetry={() => setRefresh(true)}
+            />
+          )}
+
+          {!loading && !loadError && !hasFavorites && (
             <EmptyState
               title="لا توجد مفضلات"
               subtitle="أضف متاجر أو منتجات إلى مفضلتك لتجدها هنا"
             />
           )}
 
-          {!loading && hasFavorites && (
+          {!loading && !loadError && hasFavorites && (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContentContainer}

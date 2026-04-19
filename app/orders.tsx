@@ -7,8 +7,10 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ShannahImage } from "../components/ui/ShannahImage";
+import { useGlobal } from "../context/GlobalContext";
 import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { formatSAR } from "../utils/currency";
 import * as haptics from "../utils/haptics";
 import { getOrders, submitReview } from "../services/shannahApi";
@@ -16,11 +18,51 @@ import * as theme from "../theme.json";
 
 export default function Orders() {
   const { token } = useAuth();
+  const { userData } = useGlobal();
   const toast = useToast();
   const [currentOrders, setCurrentOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const reclassifyOrders = (list) => {
+    setCurrentOrders(
+      list.filter((o) => !["completed", "cancelled"].includes(o.status)),
+    );
+    setPastOrders(
+      list.filter((o) => ["completed", "cancelled"].includes(o.status)),
+    );
+  };
+
+  useRealtimeOrders(userData?.id, {
+    onStatusUpdate: (payload) => {
+      // Merge the status change into whichever bucket the order currently
+      // lives in; reclassify because "delivered" moves from current to past.
+      setCurrentOrders((prev) => {
+        const all = [...prev, ...pastOrders].map((o) =>
+          o.id === payload.order_id
+            ? { ...o, status: payload.new_status, status_ar: payload.new_status }
+            : o,
+        );
+        reclassifyOrders(all);
+        return prev;
+      });
+      toast.show({
+        message: "تم تحديث حالة طلبك",
+        kind: "info",
+      });
+    },
+    onCancelled: (payload) => {
+      setCurrentOrders((prev) => {
+        const all = [...prev, ...pastOrders].map((o) =>
+          o.id === payload.order_id ? { ...o, status: "cancelled" } : o,
+        );
+        reclassifyOrders(all);
+        return prev;
+      });
+      toast.show({ message: "تم إلغاء طلبك", kind: "error" });
+    },
+  });
 
   const fetchOrders = async () => {
     try {

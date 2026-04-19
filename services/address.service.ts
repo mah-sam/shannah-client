@@ -1,6 +1,14 @@
 import { AxiosError } from "axios";
 import api, { BASE_URL, authHeaders } from "./api";
 
+function passthrough422(error: unknown) {
+  const e = error as AxiosError;
+  if (e.response?.status === 422) {
+    return e.response.data;
+  }
+  throw error;
+}
+
 export async function saveOrUpdateAddress(
   token: string,
   address: Record<string, unknown>,
@@ -20,11 +28,7 @@ export async function saveOrUpdateAddress(
     });
     return response.data;
   } catch (error) {
-    const e = error as AxiosError;
-    if (e.response?.status === 422) {
-      return e.response.data;
-    }
-    console.error(e.response?.data);
+    return passthrough422(error);
   }
 }
 
@@ -33,25 +37,17 @@ export async function saveAddress(token: string, address: Record<string, unknown
 }
 
 export async function getAddresses(token: string) {
-  try {
-    const response = await api.get(`${BASE_URL}/client/addresses`, {
-      headers: authHeaders(token),
-    });
-    return response.data;
-  } catch (error) {
-    console.error(error);
-  }
+  const response = await api.get(`${BASE_URL}/client/addresses`, {
+    headers: authHeaders(token),
+  });
+  return response.data;
 }
 
 export async function getAddress(token: string, id: number | string) {
-  try {
-    const response = await api.get(`${BASE_URL}/client/addresses/${id}`, {
-      headers: authHeaders(token),
-    });
-    return response.data;
-  } catch (error) {
-    console.error(error);
-  }
+  const response = await api.get(`${BASE_URL}/client/addresses/${id}`, {
+    headers: authHeaders(token),
+  });
+  return response.data;
 }
 
 export async function deleteAddress(token: string, id: number | string) {
@@ -61,10 +57,6 @@ export async function deleteAddress(token: string, id: number | string) {
     });
     return response.data;
   } catch (error) {
-    const e = error as AxiosError;
-    if (e.response?.status === 422) {
-      return e.response.data;
-    }
-    console.error(error);
+    return passthrough422(error);
   }
 }

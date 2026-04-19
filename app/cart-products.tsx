@@ -35,10 +35,15 @@ const CartProducts = () => {
 
   useEffect(() => {
     (async () => {
-      const result = await getStores(token, storeId);
-      setStore(result.data);
+      try {
+        const result = await getStores(token, storeId);
+        setStore(result?.data ?? {});
+      } catch {
+        // Store metadata is decorative here (header, prep time); the cart
+        // itself is local state so the screen remains usable without it.
+      }
     })();
-  }, [token]);
+  }, [token, storeId]);
 
   const updateStoreProducts = (type, sId, nextProducts) => {
     setCartItems({

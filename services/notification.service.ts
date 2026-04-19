@@ -1,5 +1,10 @@
 import api, { BASE_URL, authHeaders } from "./api";
 
+// Fire-and-forget mutations (push tokens, read markers) swallow errors on
+// purpose: they are best-effort and must not interrupt the user's flow.
+// Read endpoints propagate errors; `getUnreadCount` has a safe zero default
+// because a failed badge must not crash the tab layout.
+
 export async function registerPushToken(token: string, pushToken: string, platform: string) {
   try {
     await api.post(
@@ -8,7 +13,7 @@ export async function registerPushToken(token: string, pushToken: string, platfo
       { headers: authHeaders(token) },
     );
   } catch (error) {
-    console.error("Failed to register push token:", error);
+    console.warn("Failed to register push token:", error);
   }
 }
 
@@ -19,20 +24,15 @@ export async function unregisterPushToken(token: string, pushToken: string) {
       headers: authHeaders(token),
     });
   } catch (error) {
-    console.error("Failed to unregister push token:", error);
+    console.warn("Failed to unregister push token:", error);
   }
 }
 
 export async function getNotifications(token: string) {
-  try {
-    const response = await api.get(`${BASE_URL}/notifications`, {
-      headers: authHeaders(token),
-    });
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    return { data: [] };
-  }
+  const response = await api.get(`${BASE_URL}/notifications`, {
+    headers: authHeaders(token),
+  });
+  return response.data;
 }
 
 export async function getUnreadCount(token: string) {
@@ -43,6 +43,7 @@ export async function getUnreadCount(token: string) {
     );
     return response.data;
   } catch (error) {
+    console.warn("Failed to fetch unread count:", error);
     return { count: 0 };
   }
 }
@@ -55,7 +56,7 @@ export async function markNotificationRead(token: string, id: number | string) {
       { headers: authHeaders(token) },
     );
   } catch (error) {
-    console.error(error);
+    console.warn("Failed to mark notification read:", error);
   }
 }
 
@@ -67,6 +68,6 @@ export async function markAllNotificationsRead(token: string) {
       { headers: authHeaders(token) },
     );
   } catch (error) {
-    console.error(error);
+    console.warn("Failed to mark all notifications read:", error);
   }
 }

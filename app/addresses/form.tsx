@@ -26,11 +26,13 @@ import BottomActionBar from "../../components/ui/BottomActionBar";
 import useAuth from "../../hooks/useAuth";
 import { useCurrentLocation } from "../../hooks/useCurrentLocation";
 import useKeyboard from "../../hooks/useKeyboard";
+import { useToast } from "../../context/ToastContext";
 import { getAddress, saveOrUpdateAddress } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
 export default function Form() {
   const { token } = useAuth();
+  const { show: showToast } = useToast();
   const { action, id } = useLocalSearchParams();
   const { location, loading, error, refresh } = useCurrentLocation();
   const [coords, setCoords] = useState(null);
@@ -230,17 +232,29 @@ export default function Form() {
       is_default: !isEditMode, // Only set as default for new addresses
     };
 
-    const res = await saveOrUpdateAddress(
-      token,
-      data,
-      isEditMode ? "update" : "create",
-      isEditMode ? id : null,
-    );
+    let res;
+    try {
+      res = await saveOrUpdateAddress(
+        token,
+        data,
+        isEditMode ? "update" : "create",
+        isEditMode ? id : null,
+      );
+    } catch {
+      showToast({ kind: "error", message: "تعذّر حفظ العنوان، حاول مجدداً" });
+      return;
+    }
 
-    if (res.errors) {
+    if (res?.errors) {
       setErrors({ ...initErrors, ...res.errors });
-    } else if (res.status) {
+    } else if (res?.status) {
+      showToast({
+        kind: "success",
+        message: isEditMode ? "تم تحديث العنوان" : "تم حفظ العنوان",
+      });
       router.back();
+    } else {
+      showToast({ kind: "error", message: res?.message || "تعذّر حفظ العنوان" });
     }
   };
 

@@ -7,10 +7,12 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SearchIcon } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ShannahImage } from "../../components/ui/ShannahImage";
+import { useToast } from "../../context/ToastContext";
 import { search, searchTags } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
 const Search = () => {
+  const { show: showToast } = useToast();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchText, setSeachText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,8 +21,12 @@ const Search = () => {
 
   useEffect(() => {
     (async () => {
-      const result = await searchTags();
-      setTags(result.data);
+      try {
+        const result = await searchTags();
+        setTags(result?.data ?? []);
+      } catch {
+        // Non-blocking: tags are suggestions; leave empty on failure.
+      }
     })();
   }, []);
 
@@ -32,13 +38,19 @@ const Search = () => {
 
     const t = setTimeout(async () => {
       setLoading(true);
-      const result = await search(searchText);
-      setLoading(false);
-      setSearchResult(result.data);
+      try {
+        const result = await search(searchText);
+        setSearchResult(result?.data ?? []);
+      } catch {
+        setSearchResult([]);
+        showToast({ kind: "error", message: "تعذّر البحث، حاول مجدداً" });
+      } finally {
+        setLoading(false);
+      }
     }, 400);
 
     return () => clearTimeout(t);
-  }, [searchText]);
+  }, [searchText, showToast]);
 
   return (
     <SafeAreaInsetsContext.Consumer>

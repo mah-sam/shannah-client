@@ -75,19 +75,28 @@ const Product = () => {
 
   useEffect(() => {
     (async () => {
-      const result = await getStores(token, storeId);
-      setStore(result.data);
+      try {
+        const result = await getStores(token, storeId);
+        setStore(result?.data ?? {});
+      } catch {
+        toast.show({ message: "تعذّر تحميل بيانات المتجر", kind: "error" });
+      }
     })();
-  }, [token]);
+  }, [token, storeId]);
 
   useEffect(() => {
     (async () => {
-      const result = await getProduct(productId);
-      setProduct(result.data);
-      setIsFavorite(result.data?.is_favorite || false);
-      setProductDataLoaded(true);
+      try {
+        const result = await getProduct(productId);
+        setProduct(result?.data ?? {});
+        setIsFavorite(result?.data?.is_favorite || false);
+      } catch {
+        toast.show({ message: "تعذّر تحميل المنتج", kind: "error" });
+      } finally {
+        setProductDataLoaded(true);
+      }
     })();
-  }, [store]);
+  }, [store, productId]);
 
   useEffect(() => {
     setRequiredOptions(

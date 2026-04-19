@@ -11,9 +11,11 @@
  *   - notification.service.js — push tokens, notifications
  */
 
-export { login, logout, sendOtp, verifyOtp, signUp, verifyEmailOtp, profileComplete, getUserInfo, updateUserInfo } from "./auth.service";
+export { login, logout, sendOtp, verifyOtp, signUp, verifyEmailOtp, profileComplete, getUserInfo, updateUserInfo, sendPasswordResetOtp, verifyPasswordResetOtp, resetPassword } from "./auth.service";
 export { getStores, getProduct, search, searchTags, getPlatformSettings } from "./store.service";
 export { submitOrder, orderDetails, getOrders, applyCoupon, submitReview } from "./order.service";
 export { saveOrUpdateAddress, saveAddress, getAddresses, getAddress, deleteAddress } from "./address.service";
 export { getFavorites, toggleFavorite } from "./favorite.service";
 export { registerPushToken, unregisterPushToken, getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from "./notification.service";
+export { initiatePayment } from "./payment.service";
+export type { PaymentMethod, InitiatePaymentResponse } from "./payment.service";

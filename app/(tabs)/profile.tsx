@@ -29,8 +29,13 @@ const Profile = () => {
   useEffect(() => {
     (async () => {
       if (token !== null) {
-        const result = await getUserInfo(token);
-        setUser(result.data);
+        try {
+          const result = await getUserInfo(token);
+          setUser(result?.data ?? {});
+        } catch {
+          // Keep whatever cached user data we have; the 401 interceptor handles
+          // session expiry. Other failures leave the header showing placeholders.
+        }
       }
     })();
   }, [token]);

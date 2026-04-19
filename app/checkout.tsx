@@ -37,7 +37,7 @@ import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
 import * as haptics from "../utils/haptics";
-import { applyCoupon, getPlatformSettings, getStores, submitOrder } from "../services/shannahApi";
+import { applyCoupon, getPlatformSettings, getStores, initiatePayment, submitOrder } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Checkout = () => {
@@ -84,17 +84,23 @@ const Checkout = () => {
       });
 
       const fetchFees = async () => {
-        const [settingsResult, storeResult] = await Promise.all([
-          getPlatformSettings(),
-          getStores(null, storeId),
-        ]);
-        setVatPercent(parseFloat(settingsResult?.vat_percent ?? 15));
-        const storeDelivery = storeResult?.data?.delivery_fee;
-        setDeliveryFee(
-          storeDelivery != null
-            ? parseFloat(storeDelivery)
-            : parseFloat(settingsResult?.delivery_fee ?? 0),
-        );
+        try {
+          const [settingsResult, storeResult] = await Promise.all([
+            getPlatformSettings(),
+            getStores(null, storeId),
+          ]);
+          setVatPercent(parseFloat(settingsResult?.vat_percent ?? 15));
+          const storeDelivery = storeResult?.data?.delivery_fee;
+          setDeliveryFee(
+            storeDelivery != null
+              ? parseFloat(storeDelivery)
+              : parseFloat(settingsResult?.delivery_fee ?? 0),
+          );
+        } catch {
+          // Fees are server-authoritative at order submission; if we can't
+          // fetch them here the user still sees sane defaults and the final
+          // total is recomputed on the server.
+        }
       };
       fetchFees();
     }, [deliveryAddress, storeId]),
@@ -117,7 +123,19 @@ const Checkout = () => {
       options_price: product.optionsPrice ?? 0,
     }));
 
-    const result = await applyCoupon(token, couponCode.trim().toUpperCase(), items);
+    let result;
+    try {
+      result = await applyCoupon(token, couponCode.trim().toUpperCase(), items);
+    } catch {
+      setCouponLoading(false);
+      setCouponDiscount(0);
+      setCouponApplied(false);
+      const msg = "تعذّر الاتصال بالخادم. تحقق من الإنترنت";
+      setCouponError(msg);
+      haptics.warning();
+      toast.show({ message: msg, kind: "error" });
+      return;
+    }
 
     setCouponLoading(false);
 
@@ -189,11 +207,29 @@ const Checkout = () => {
         return;
       }
 
+      // Route through the payment controller so the flow is identical
+      // regardless of method. For COD this is an acknowledgement; future
+      // gateways will return a `payment_url` to open before confirming.
+      const orderId = result.data.id;
+      try {
+        const payment = await initiatePayment(token, orderId, "cod");
+        if (payment?.status === "requires_payment" && payment.payment_url) {
+          // Placeholder for future: open in WebBrowser / universal link.
+          // Today COD never returns this path; keeping the code path proves
+          // the integration contract stays stable when a gateway is added.
+          console.warn("[checkout] payment_url requested but no gateway wired");
+        }
+      } catch {
+        // Do not block the user from reaching the confirmation screen —
+        // the order itself is already created. Payment reconciliation can
+        // be retried from the orders screen when gateways are wired.
+      }
+
       await deleteStoreById(productType, storeId);
       haptics.success();
       router.replace({
         pathname: "/order-confirmed",
-        params: { id: result.data.id },
+        params: { id: orderId },
       });
     } catch (e) {
       const msg = "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.";

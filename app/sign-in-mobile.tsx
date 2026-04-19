@@ -49,12 +49,12 @@ export default function SignInMobile() {
       if (data?.status === true) {
         setOtpSent(true);
       } else if (data?.errors !== undefined) {
-        Alert.alert("خطأ", data.message);
+        Alert.alert("خطأ", data.message || "فشل في إرسال الرمز");
       } else {
-        Alert.alert("خطأ", "فشل في إرسال الرمز");
+        Alert.alert("خطأ", data?.message || "فشل في إرسال الرمز");
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
     }
   };
 
@@ -65,9 +65,15 @@ export default function SignInMobile() {
       return;
     }
 
-    const data = await verifyOtp(phoneNumber, enteredOtp);
+    let data;
+    try {
+      data = await verifyOtp(phoneNumber, enteredOtp);
+    } catch {
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      return;
+    }
     if (data?.status !== true) {
-      Alert.alert("خطأ", data.message);
+      Alert.alert("خطأ", data?.message || "الرمز غير صحيح");
       return;
     }
 

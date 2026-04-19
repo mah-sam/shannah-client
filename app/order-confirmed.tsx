@@ -6,22 +6,48 @@ import { Image, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { ChevronDownIcon, SarIcon } from "../components/Icons";
 import BottomActionBar from "../components/ui/BottomActionBar";
+import { useGlobal } from "../context/GlobalContext";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { orderDetails } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function OrderConfirmed() {
   const { id } = useLocalSearchParams();
   const { token } = useAuth();
+  const { userData } = useGlobal();
+  const { show: showToast } = useToast();
   const [order, setOrder] = useState({});
+
+  useRealtimeOrders(userData?.id, {
+    onStatusUpdate: (payload) => {
+      if (String(payload.order_id) !== String(id)) return;
+      setOrder((prev) => ({
+        ...prev,
+        status: payload.new_status,
+        status_ar: payload.new_status,
+      }));
+      showToast({ message: "تم تحديث حالة طلبك", kind: "info" });
+    },
+    onCancelled: (payload) => {
+      if (String(payload.order_id) !== String(id)) return;
+      setOrder((prev) => ({ ...prev, status: "cancelled" }));
+      showToast({ message: "تم إلغاء طلبك", kind: "error" });
+    },
+  });
 
   useEffect(() => {
     token &&
       (async () => {
-        const result = await orderDetails(token, id);
-        setOrder(result?.data);
+        try {
+          const result = await orderDetails(token, id);
+          setOrder(result?.data ?? {});
+        } catch {
+          showToast({ kind: "error", message: "تعذّر تحميل تفاصيل الطلب" });
+        }
       })();
-  }, [token]);
+  }, [token, id]);
 
   return (
     <SafeAreaInsetsContext.Consumer>

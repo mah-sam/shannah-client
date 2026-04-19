@@ -42,7 +42,14 @@ export default function SignInEmail() {
 
   const handleSignIn = async () => {
     setIsSubmitting(true);
-    const data = await login(email.trim(), password);
+    let data;
+    try {
+      data = await login(email.trim(), password);
+    } catch {
+      setIsSubmitting(false);
+      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      return;
+    }
     setIsSubmitting(false);
 
     if (data?.status === true) {
@@ -61,7 +68,7 @@ export default function SignInEmail() {
         },
       });
     } else {
-      Alert.alert("خطأ", data.message);
+      Alert.alert("خطأ", data?.message || "تعذّر تسجيل الدخول");
     }
   };
 
@@ -129,13 +136,19 @@ export default function SignInEmail() {
               textContentType="password"
               autoComplete="password"
             />
-            <Text
-              category="s2"
-              status="primary"
-              style={styles.forgotPasswordText}
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push("/forgot-password")}
+              style={{ alignSelf: "flex-end" }}
             >
-              نسيت كلمة المرور؟
-            </Text>
+              <Text
+                category="s2"
+                status="primary"
+                style={styles.forgotPasswordText}
+              >
+                نسيت كلمة المرور؟
+              </Text>
+            </Pressable>
             <Button
               onPress={() => handleSignIn()}
               disabled={emptyInputs || isSubmitting}

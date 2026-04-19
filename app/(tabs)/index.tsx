@@ -131,7 +131,13 @@ export default function HomeScreen() {
   useEffect(() => {
     token &&
       (async () => {
-        const result = await getOrders(token);
+        let result;
+        try {
+          result = await getOrders(token);
+        } catch {
+          // Past-orders section is enhancement, not critical. Leave empty on failure.
+          return;
+        }
         // Filter completed orders and extract unique stores grouped by item type
         const completedOrders =
           result?.data?.filter((order) => order.status === "completed") ?? [];
