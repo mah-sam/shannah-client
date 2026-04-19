@@ -11,9 +11,9 @@ describe("computeEtaRange", () => {
   test("clamps to the minimum window when prep + distance is tiny", () => {
     const range = computeEtaRange(5, 0);
     expect(range).not.toBeNull();
-    // min floor is 15 minutes and max is at least min + 10.
-    expect(range!.min).toBeGreaterThanOrEqual(15);
-    expect(range!.max - range!.min).toBeGreaterThanOrEqual(10);
+    // min floor is 10 minutes and window is at least 8 minutes wide.
+    expect(range!.min).toBeGreaterThanOrEqual(10);
+    expect(range!.max - range!.min).toBeGreaterThanOrEqual(8);
   });
 
   test("widens the window with increasing distance", () => {

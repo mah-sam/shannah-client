@@ -111,21 +111,35 @@ export default function Orders() {
 
   const handleRating = async (orderId, rating) => {
     haptics.tapSoft();
+    // Optimistic: flip the star state immediately so there is no visual jitter
+    // between tap and network round-trip. Revert on failure.
+    const previousRating = pastOrders.find((o) => o.id === orderId)?.rating ?? null;
+    setPastOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, rating } : o)),
+    );
+
     try {
       const result = await submitReview(token, orderId, rating);
       if (result?.status === true) {
-        setPastOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, rating } : o)),
-        );
         haptics.success();
         toast.show({ message: "شكراً على تقييمك", kind: "success" });
       } else {
+        setPastOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ? { ...o, rating: previousRating } : o,
+          ),
+        );
         toast.show({
           message: result?.message || "تعذّر إرسال التقييم",
           kind: "error",
         });
       }
     } catch {
+      setPastOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, rating: previousRating } : o,
+        ),
+      );
       toast.show({ message: "تعذّر إرسال التقييم", kind: "error" });
     }
   };
@@ -309,6 +323,7 @@ export default function Orders() {
                                   onPress={() =>
                                     handleRating(order.id, index + 1)
                                   }
+                                  hitSlop={4}
                                 >
                                   <StarIcon
                                     style={[

@@ -13,7 +13,7 @@ import { toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
 import { formatSAR } from "../utils/currency";
 import { formatDistanceKm, haversineKm } from "../utils/distance";
-import { computeEtaRange, formatEtaRange } from "../utils/eta";
+import { etaProvider, formatEta } from "../services/eta.service";
 import * as haptics from "../utils/haptics";
 import { shareStore } from "../utils/shareStore";
 import {
@@ -53,8 +53,11 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
   const distanceKm = reference && store?.latitude != null && store?.longitude != null
     ? haversineKm(reference, { latitude: store.latitude, longitude: store.longitude })
     : null;
-  const etaRange = computeEtaRange(store?.base_prep_time_minutes, distanceKm);
-  const etaLabel = formatEtaRange(etaRange) || store?.delivery_time || "";
+  const etaRange = etaProvider.estimate({
+    prepMinutes: store?.base_prep_time_minutes,
+    distanceKm,
+  });
+  const etaLabel = formatEta(etaRange) || store?.delivery_time || "";
   const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
   const outOfRange = distanceKm != null && store?.max_delivery_radius_km != null
     && distanceKm > store.max_delivery_radius_km;
@@ -165,8 +168,11 @@ export const StoreCard = ({
   const distanceKm = reference && item?.latitude != null && item?.longitude != null
     ? haversineKm(reference, { latitude: item.latitude, longitude: item.longitude })
     : null;
-  const etaRange = computeEtaRange(item?.base_prep_time_minutes, distanceKm);
-  const etaLabel = formatEtaRange(etaRange) || item?.delivery_time || "";
+  const etaRange = etaProvider.estimate({
+    prepMinutes: item?.base_prep_time_minutes,
+    distanceKm,
+  });
+  const etaLabel = formatEta(etaRange) || item?.delivery_time || "";
   const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
   const outOfRange = distanceKm != null && item?.max_delivery_radius_km != null
     && distanceKm > item.max_delivery_radius_km;

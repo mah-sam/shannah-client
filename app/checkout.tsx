@@ -106,10 +106,15 @@ const Checkout = () => {
     }, [deliveryAddress, storeId]),
   );
 
-  const currentSubtotal = subtotal(productType, storeId);
-  const taxableAmount = Math.max(0, currentSubtotal - couponDiscount);
-  const taxAmount = Math.round(taxableAmount * vatPercent / 100 * 100) / 100;
-  const totalAmount = taxableAmount + deliveryFee + taxAmount;
+  // Inclusive-VAT math (ZATCA). Prices in the cart are gross; the VAT line
+  // below is an informational extraction, not an extra charge.
+  const currentSubtotal = subtotal(productType, storeId); // gross items subtotal
+  const taxableGross = Math.max(0, currentSubtotal - couponDiscount + deliveryFee);
+  const totalAmount = Math.round(taxableGross * 100) / 100;
+  const taxAmount =
+    Math.round(
+      (taxableGross - taxableGross / (1 + vatPercent / 100)) * 100,
+    ) / 100;
 
   const onApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -434,17 +439,19 @@ const Checkout = () => {
                   </View>
                 </View>
                 <View style={styles.summaryCardRow}>
-                  <Text category="s2">الضريبة</Text>
+                  <Text category="s2" style={{ color: theme["text-body-color"] }}>
+                    شامل ضريبة القيمة المضافة
+                  </Text>
                   <View style={styles.priceContainer}>
-                    <Text category="s2">{taxAmount}</Text>
+                    <Text category="s2" style={{ color: theme["text-body-color"] }}>
+                      {taxAmount}
+                    </Text>
                     <SarIcon style={styles.sarIcon}></SarIcon>
                   </View>
                 </View>
               </View>
               <View style={styles.summaryCardRow}>
-                <Text category="s1">
-                  الإجمالي <Text>(يشمل الرسوم والضرائب والخصومات)</Text>
-                </Text>
+                <Text category="s1">الإجمالي</Text>
 
                 <View style={styles.priceContainer}>
                   <Text category="s1">{totalAmount}</Text>

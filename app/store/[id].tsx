@@ -2,13 +2,12 @@
 import { Layout, Spinner, Tab, TabView, Text } from "@ui-kitten/components";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
   ChevronLeft,
   ClockIcon,
   DistanceIcon,
-  MarkerPinIcon,
   SarIcon,
   StarIcon,
 } from "../../components/Icons";
@@ -25,17 +24,7 @@ import { getStores, toggleFavorite } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 import { formatSAR } from "../../utils/currency";
 import { formatDistanceKm, haversineKm } from "../../utils/distance";
-import { computeEtaRange, formatEtaRange } from "../../utils/eta";
-
-const openStoreInMaps = (store) => {
-  if (store?.latitude == null || store?.longitude == null) return;
-  const label = encodeURIComponent(store.name ?? "");
-  const url = Platform.select({
-    ios: `maps:0,0?q=${label}@${store.latitude},${store.longitude}`,
-    android: `geo:0,0?q=${store.latitude},${store.longitude}(${label})`,
-  });
-  if (url) Linking.openURL(url);
-};
+import { etaProvider, formatEta } from "../../services/eta.service";
 
 const Store = () => {
   const { signedIn } = useGlobal();
@@ -57,8 +46,11 @@ const Store = () => {
           longitude: store.longitude,
         })
       : null;
-  const etaRange = computeEtaRange(store?.base_prep_time_minutes, distanceKm);
-  const etaLabel = formatEtaRange(etaRange) || store?.delivery_time || "";
+  const etaRange = etaProvider.estimate({
+    prepMinutes: store?.base_prep_time_minutes,
+    distanceKm,
+  });
+  const etaLabel = formatEta(etaRange) || store?.delivery_time || "";
   const distanceLabel = distanceKm != null ? formatDistanceKm(distanceKm) : "";
   const outOfRange =
     distanceKm != null &&
@@ -91,8 +83,6 @@ const Store = () => {
     })();
   }, [token, id, reloadKey]);
 
-  const hasLocation =
-    store?.latitude != null && store?.longitude != null;
   const locationText = [store?.area, store?.city].filter(Boolean).join("، ");
 
   const renderContent = () => {
@@ -157,21 +147,10 @@ const Store = () => {
                 style={styles.storeRatingText}
               >{`${store.rating} (${store.review_count})`}</Text>
             </View>
-            {locationText || hasLocation ? (
-              <Pressable
-                onPress={() => hasLocation && openStoreInMaps(store)}
-                disabled={!hasLocation}
-                style={styles.locationRow}
-                hitSlop={6}
-              >
-                <MarkerPinIcon style={styles.locationPin} />
-                <Text style={styles.storeLocationText} numberOfLines={1}>
-                  {locationText || "عرض على الخريطة"}
-                </Text>
-                {hasLocation ? (
-                  <Text style={styles.locationLink}>عرض على الخريطة</Text>
-                ) : null}
-              </Pressable>
+            {locationText ? (
+              <Text style={styles.storeLocationText} numberOfLines={1}>
+                {locationText}
+              </Text>
             ) : null}
             <ScrollView horizontal>
               <View style={styles.storeInfo}>
@@ -329,21 +308,38 @@ const styles = StyleSheet.create({
     tintColor: theme["color-primary-500"],
   },
   logoContainer: {
+    // Elevated white card straddling the cover/content boundary.
     position: "absolute",
-    left: 24,
-    top: 110,
-    width: 48,
-    height: 48,
-    boxShadow: "0px 0px 6px rgba(0, 0, 0, 0.15)",
-    borderRadius: 4,
-    backgroundColor: theme["color-primary-500"],
+    left: 16,
+    top: 100,
+    width: 72,
+    height: 72,
+    padding: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  logoImage: { width: 48, height: 48 },
+  logoImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
   starIcon: {
     width: 16,
     height: 16,
   },
-  storeInfoContainer: { paddingHorizontal: 16, paddingVertical: 12, gap: 6 },
+  storeInfoContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 44, // clear the elevated logo card (72 - 20 on cover = 52 below, leave ~44 of breathing room)
+    paddingBottom: 12,
+    gap: 6,
+  },
   storeName: {
     color: theme["text-heading-color"],
     textAlign: "left",
@@ -356,25 +352,9 @@ const styles = StyleSheet.create({
   storeRatingText: {
     color: theme["text-body-color"],
   },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  locationPin: {
-    width: 14,
-    height: 14,
-    tintColor: theme["text-body-color"],
-  },
   storeLocationText: {
-    flex: 1,
     color: theme["text-body-color"],
     textAlign: "left",
-    fontSize: 12,
-  },
-  locationLink: {
-    color: theme["color-primary-500"],
-    fontFamily: "TajawalMedium",
     fontSize: 12,
   },
   outOfRangeBadge: {

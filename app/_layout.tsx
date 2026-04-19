@@ -67,19 +67,24 @@ export default function RootLayout() {
   }
 
   return (
-    <ErrorBoundary>
+    <>
       <IconRegistry icons={[AssetIconsPack]} />
       <ApplicationProvider {...eva} theme={theme} customMapping={mapping}>
-        <GlobalProvider>
-          <ToastProvider>
-            <StatusBar style="dark" />
-            <SessionExpiryBridge />
-            <StackNavigator></StackNavigator>
-            <OfflineBanner />
-          </ToastProvider>
-        </GlobalProvider>
+        {/* ErrorBoundary sits inside ApplicationProvider so the fallback can
+            safely render alongside it; its own fallback uses plain RN so it
+            never depends on the provider being healthy. */}
+        <ErrorBoundary>
+          <GlobalProvider>
+            <ToastProvider>
+              <StatusBar style="dark" />
+              <SessionExpiryBridge />
+              <StackNavigator></StackNavigator>
+              <OfflineBanner />
+            </ToastProvider>
+          </GlobalProvider>
+        </ErrorBoundary>
       </ApplicationProvider>
-    </ErrorBoundary>
+    </>
   );
 }
 

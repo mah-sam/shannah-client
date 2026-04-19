@@ -22,7 +22,7 @@ import { useDeliveryReference } from "../../hooks/useDeliveryReference";
 import { getOrders, getStores } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 import { haversineKm } from "../../utils/distance";
-import { computeEtaRange, etaMidpoint } from "../../utils/eta";
+import { etaProvider, etaSortKey } from "../../services/eta.service";
 
 export default function HomeScreen() {
   const { signedIn, deliveryAddress, resumeTick } = useGlobal();
@@ -72,8 +72,11 @@ export default function HomeScreen() {
             longitude: s.longitude,
           })
         : null;
-      const eta = computeEtaRange(s.base_prep_time_minutes, dist);
-      return { s, dist, etaMid: etaMidpoint(eta) };
+      const eta = etaProvider.estimate({
+        prepMinutes: s.base_prep_time_minutes,
+        distanceKm: dist,
+      });
+      return { s, dist, etaMid: etaSortKey(eta) };
     });
     switch (sortBy) {
       case "rating":

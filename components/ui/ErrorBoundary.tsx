@@ -1,7 +1,6 @@
 // @ts-nocheck
-import { Button, Text } from "@ui-kitten/components";
 import { Component, ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as theme from "../../theme.json";
 import { captureException } from "../../utils/errorReporting";
 
@@ -14,10 +13,14 @@ interface State {
 }
 
 /**
- * Top-level error boundary. Catches any render-phase exception so the whole
- * app falls back to a branded error screen instead of a white screen of
- * death. The error is forwarded to the central error reporter so we learn
- * about it in production.
+ * Top-level error boundary. Catches any render-phase exception and shows a
+ * branded fallback instead of a white screen.
+ *
+ * Built on plain React Native primitives (Text, Pressable, View) rather
+ * than UI Kitten components, because the boundary may render BEFORE — or
+ * ABOVE — ApplicationProvider in the tree. A UI Kitten Text in the
+ * fallback would itself crash ("unsupported configuration") and mask the
+ * real error.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
@@ -38,20 +41,21 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <View style={styles.container}>
-        <Text category="h3" style={styles.title}>
-          حدث خطأ غير متوقع
-        </Text>
+        <Text style={styles.title}>حدث خطأ غير متوقع</Text>
         <Text style={styles.subtitle}>
           حاول إعادة المحاولة. إذا استمرت المشكلة، أعد فتح التطبيق.
         </Text>
-        <Button
-          appearance="outline"
-          status="basic"
+        <Pressable
           onPress={this.handleRetry}
-          style={styles.button}
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="إعادة المحاولة"
         >
-          {() => <Text style={styles.buttonText}>إعادة المحاولة</Text>}
-        </Button>
+          <Text style={styles.buttonText}>إعادة المحاولة</Text>
+        </Pressable>
       </View>
     );
   }
@@ -69,19 +73,30 @@ const styles = StyleSheet.create({
   title: {
     textAlign: "center",
     fontFamily: "TajawalBold",
+    fontSize: 20,
     color: theme["text-heading-color"],
   },
   subtitle: {
     textAlign: "center",
     color: theme["text-body-color"],
     fontFamily: "TajawalMedium",
+    fontSize: 14,
     lineHeight: 22,
   },
   button: {
     marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme["text-heading-color"],
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
   buttonText: {
     fontFamily: "TajawalMedium",
     color: theme["text-heading-color"],
+    fontSize: 14,
   },
 });
