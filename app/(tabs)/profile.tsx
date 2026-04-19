@@ -14,6 +14,7 @@ import {
   LocationSolid,
   LogOut,
 } from "../../components/Icons";
+import AlertDialog from "../../components/ui/AlertDialog";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import { getUserInfo } from "../../services/shannahApi";
@@ -23,6 +24,7 @@ const Profile = () => {
   const { token } = useAuth();
   const { signOut } = useGlobal();
   const [user, setUser] = useState({});
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -129,7 +131,7 @@ const Profile = () => {
               status="danger"
               accessoryLeft={<LogOut></LogOut>}
               style={styles.signOutButton}
-              onPress={async () => await signOut()}
+              onPress={() => setShowSignOutDialog(true)}
             >
               <View>
                 <Text category="s1" style={styles.signOutButtonText}>
@@ -138,6 +140,19 @@ const Profile = () => {
               </View>
             </Button>
           </View>
+          <AlertDialog
+            visible={showSignOutDialog}
+            title="تسجيل الخروج"
+            message="هل تريد تسجيل الخروج من حسابك؟"
+            confirmText="تسجيل الخروج"
+            cancelText="إلغاء"
+            isDangerous={true}
+            onCancel={() => setShowSignOutDialog(false)}
+            onConfirm={async () => {
+              setShowSignOutDialog(false);
+              await signOut();
+            }}
+          />
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>

@@ -23,11 +23,40 @@ const api = axios.create({
   },
 });
 
-// Response interceptor to handle 403 codes
+type SessionExpiredHandler = () => void;
+let onSessionExpired: SessionExpiredHandler | null = null;
+
+export function setSessionExpiredHandler(fn: SessionExpiredHandler | null) {
+  onSessionExpired = fn;
+}
+
+let sessionExpiredFired = false;
+
+// Response interceptor to handle 401/403 codes
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const code = error.response?.data?.code;
+
+    if (error.response?.status === 401) {
+      if (!sessionExpiredFired) {
+        sessionExpiredFired = true;
+        try {
+          await deleteItemAsync("token");
+          await AsyncStorage.removeItem("user");
+        } catch {
+          // ignore storage errors
+        }
+        if (onSessionExpired) {
+          onSessionExpired();
+        } else {
+          router.replace("/sign-in");
+        }
+        setTimeout(() => {
+          sessionExpiredFired = false;
+        }, 2000);
+      }
+    }
 
     if (error.response?.status === 403 && code === "PROFILE_INCOMPLETE") {
       router.push("/profile-complete");

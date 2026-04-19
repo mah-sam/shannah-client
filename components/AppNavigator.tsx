@@ -6,9 +6,27 @@ import {
   Text,
 } from "@ui-kitten/components";
 import { Tabs } from "expo-router";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { useGlobal } from "../context/GlobalContext";
 import * as theme from "../theme.json";
+
+const toArabicDigits = (n: number): string =>
+  String(n).replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
+
+const cartItemCount = (cartItems: unknown): number => {
+  if (!cartItems || typeof cartItems !== "object") return 0;
+  let count = 0;
+  for (const type of Object.keys(cartItems)) {
+    const stores = (cartItems as any)[type];
+    if (!stores || typeof stores !== "object") continue;
+    for (const storeId of Object.keys(stores)) {
+      const items = stores[storeId];
+      if (Array.isArray(items)) count += items.length;
+    }
+  }
+  return count;
+};
 
 const { Navigator, Screen } = createBottomTabNavigator();
 
@@ -35,12 +53,26 @@ const userIcon = (props) => (
 );
 
 const BottomTabBar = ({ navigation, state }) => {
-  const { signedIn } = useGlobal();
+  const { signedIn, cartItems } = useGlobal();
+  const cartCount = cartItemCount(cartItems);
+
+  const shoppingBagIconWithBadge = (props: any) => (
+    <View style={badgeStyles.iconWrapper}>
+      {shoppingBagIcon(props)}
+      {cartCount > 0 ? (
+        <View style={badgeStyles.badge}>
+          <Text style={badgeStyles.badgeText}>
+            {cartCount > 9 ? "+٩" : toArabicDigits(cartCount)}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
 
   const tabs = [
     { title: "الرئيسية", route: "index", icon: homeIcon },
     { title: "بحث", route: "search", icon: magnifyingGlassIcon },
-    { title: "سلة التسوق", route: "cart", icon: shoppingBagIcon },
+    { title: "سلة التسوق", route: "cart", icon: shoppingBagIconWithBadge },
   ];
 
   if (signedIn) {
@@ -150,6 +182,34 @@ const BottomTabBar = ({ navigation, state }) => {
     </SafeAreaInsetsContext.Consumer>
   );
 };
+
+const badgeStyles = StyleSheet.create({
+  iconWrapper: {
+    width: 24,
+    height: 24,
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: theme["color-primary-500"],
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "TajawalBold",
+    lineHeight: 12,
+  },
+});
 
 export const AppNavigator = () => {
   const { signedIn } = useGlobal();

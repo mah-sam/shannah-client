@@ -31,6 +31,10 @@ export default function SignUp() {
   const [email, setEmail] = useState(params.email || "");
   const [password, setPassword] = useState("");
   const [passwordConf, setPasswordConf] = useState("");
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const passwordConfRef = useRef(null);
   const [passwordSecureText, setPasswordSecureText] = useState(true);
   const [passwordConfSecureText, setPasswordConfSecureText] = useState(true);
   const [emptyInputs, setEmptyInputs] = useState(true);
@@ -240,8 +244,15 @@ export default function SignUp() {
                     caption={
                       errors.first_name === null ? "" : errors.first_name[0]
                     }
+                    returnKeyType="next"
+                    onSubmitEditing={() => lastNameRef.current?.focus()}
+                    blurOnSubmit={false}
+                    autoCapitalize="words"
+                    textContentType="givenName"
+                    autoComplete="given-name"
                   />
                   <Input
+                    ref={lastNameRef}
                     status={errors.last_name === null ? "primary" : "danger"}
                     label={() => (
                       <Text style={styles.labelText}>اسم العائلة</Text>
@@ -252,8 +263,15 @@ export default function SignUp() {
                     caption={
                       errors.last_name === null ? "" : errors.last_name[0]
                     }
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()}
+                    blurOnSubmit={false}
+                    autoCapitalize="words"
+                    textContentType="familyName"
+                    autoComplete="family-name"
                   />
                   <Input
+                    ref={emailRef}
                     status={errors.email === null ? "primary" : "danger"}
                     inputMode="email"
                     label={() => (
@@ -266,8 +284,17 @@ export default function SignUp() {
                     onChangeText={(t) => setEmail(t)}
                     placeholder="email@email.com"
                     caption={errors.email === null ? "" : errors.email[0]}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    textContentType="emailAddress"
+                    autoComplete="email"
                   />
                   <Input
+                    ref={passwordRef}
                     status={errors.password === null ? "primary" : "danger"}
                     label={() => (
                       <Text style={styles.labelText}>كلمة المرور</Text>
@@ -280,8 +307,16 @@ export default function SignUp() {
                       <SecureTextToggle target={"password"}></SecureTextToggle>
                     )}
                     caption={errors.password === null ? "" : errors.password[0]}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordConfRef.current?.focus()}
+                    blurOnSubmit={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="newPassword"
+                    autoComplete="password-new"
                   />
                   <Input
+                    ref={passwordConfRef}
                     status="primary"
                     label={() => (
                       <Text style={styles.labelText}>تأكيد كلمة المرور</Text>
@@ -295,6 +330,10 @@ export default function SignUp() {
                         target={"passwordConf"}
                       ></SecureTextToggle>
                     )}
+                    returnKeyType="done"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="newPassword"
                   />
                   <Text
                     category="s2"

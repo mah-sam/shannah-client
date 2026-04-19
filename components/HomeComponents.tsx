@@ -3,14 +3,18 @@ import { Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { PressableScale } from "./ui/PressableScale";
 import { ShannahImage } from "./ui/ShannahImage";
 import { useGlobal } from "../context/GlobalContext";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import { useDeliveryReference } from "../hooks/useDeliveryReference";
 import { toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
+import { formatSAR } from "../utils/currency";
 import { formatDistanceKm, haversineKm } from "../utils/distance";
 import { computeEtaRange, formatEtaRange } from "../utils/eta";
+import * as haptics from "../utils/haptics";
 import { shareStore } from "../utils/shareStore";
 import {
   ClockIcon,
@@ -43,6 +47,7 @@ export const StoresList = ({ items, onFavoriteToggle }) => {
 
 export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
   const { token } = useAuth();
+  const toast = useToast();
   const [isFavorite, setIsFavorite] = useState(store.is_favorite);
   const reference = useDeliveryReference();
   const distanceKm = reference && store?.latitude != null && store?.longitude != null
@@ -60,15 +65,26 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
 
   const handleToggleFavorite = async () => {
     if (!token) return;
-    const result = await toggleFavorite(token, "store", store.id);
-    setIsFavorite(result.favorited);
-    if (onFavoriteToggle) {
-      onFavoriteToggle(store.id, result.favorited);
+    haptics.tapSoft();
+    try {
+      const result = await toggleFavorite(token, "store", store.id);
+      setIsFavorite(result.favorited);
+      if (onFavoriteToggle) {
+        onFavoriteToggle(store.id, result.favorited);
+      }
+      toast.show({
+        message: result.favorited
+          ? "تمت الإضافة للمفضلة"
+          : "أُزيل من المفضلة",
+        kind: "success",
+      });
+    } catch {
+      toast.show({ message: "تعذّر تحديث المفضلة", kind: "error" });
     }
   };
 
   return (
-    <Pressable
+    <PressableScale
       onPress={() =>
         router.navigate({
           pathname: `/store/${store.id}`,
@@ -121,7 +137,7 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text
               style={styles.storeCardText}
-            >{`التوصيل ${store.delivery_fee}`}</Text>
+            >{`التوصيل ${formatSAR(store.delivery_fee)}`}</Text>
             <SarIcon style={{ width: 16, height: 16 }}></SarIcon>
           </View>
         </View>
@@ -131,7 +147,7 @@ export const OrderAgainCard = ({ store, onFavoriteToggle }) => {
           </View>
         ) : null}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 
@@ -143,6 +159,7 @@ export const StoreCard = ({
 }) => {
   const { signedIn } = useGlobal();
   const { token } = useAuth();
+  const toast = useToast();
   const [isFavorite, setIsFavorite] = useState(item.is_favorite);
   const reference = useDeliveryReference();
   const distanceKm = reference && item?.latitude != null && item?.longitude != null
@@ -160,18 +177,29 @@ export const StoreCard = ({
 
   const handleToggleFavorite = async () => {
     if (!token) return;
-    const result = await toggleFavorite(token, "store", item.id);
-    setIsFavorite(result.favorited);
-    if (onFavoriteToggle) {
-      onFavoriteToggle(item.id, result.favorited);
-    }
-    if (!showAnimatedFavoriteButton) {
-      setRefreshFavorites(true);
+    haptics.tapSoft();
+    try {
+      const result = await toggleFavorite(token, "store", item.id);
+      setIsFavorite(result.favorited);
+      if (onFavoriteToggle) {
+        onFavoriteToggle(item.id, result.favorited);
+      }
+      if (!showAnimatedFavoriteButton) {
+        setRefreshFavorites(true);
+      }
+      toast.show({
+        message: result.favorited
+          ? "تمت الإضافة للمفضلة"
+          : "أُزيل من المفضلة",
+        kind: "success",
+      });
+    } catch {
+      toast.show({ message: "تعذّر تحديث المفضلة", kind: "error" });
     }
   };
 
   return (
-    <Pressable
+    <PressableScale
       onPress={() =>
         router.navigate({
           pathname: `/store/${item.id}`,
@@ -192,7 +220,7 @@ export const StoreCard = ({
                 backgroundColor={theme["color-basic-100"]}
               />
             ) : (
-              <Pressable onPress={() => handleToggleFavorite()}>
+              <Pressable onPress={() => handleToggleFavorite()} hitSlop={8}>
                 {isFavorite ? (
                   <HeartFilledIcon
                     style={styles.heartFilledIcon}
@@ -259,7 +287,7 @@ export const StoreCard = ({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text
               style={styles.storeCardText}
-            >{`التوصيل ${item.delivery_fee}`}</Text>
+            >{`التوصيل ${formatSAR(item.delivery_fee)}`}</Text>
             <SarIcon style={{ width: 16, height: 16 }}></SarIcon>
           </View>
         </View>
@@ -269,7 +297,7 @@ export const StoreCard = ({
           </View>
         ) : null}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 

@@ -33,8 +33,10 @@ import {
 } from "../components/Icons";
 import BottomActionBar from "../components/ui/BottomActionBar";
 import { useGlobal } from "../context/GlobalContext";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
+import * as haptics from "../utils/haptics";
 import { applyCoupon, getPlatformSettings, getStores, submitOrder } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
@@ -63,6 +65,8 @@ const Checkout = () => {
 
   // Order submission error
   const [orderError, setOrderError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
 
   useFocusEffect(
     useCallback(() => {
@@ -121,10 +125,15 @@ const Checkout = () => {
       setCouponDiscount(result.discount);
       setCouponApplied(true);
       setCouponError("");
+      haptics.success();
+      toast.show({ message: "تم تطبيق كود الخصم", kind: "success" });
     } else {
       setCouponDiscount(0);
       setCouponApplied(false);
-      setCouponError(result?.message || "كود الخصم غير صالح");
+      const msg = result?.message || "كود الخصم غير صالح";
+      setCouponError(msg);
+      haptics.warning();
+      toast.show({ message: msg, kind: "error" });
     }
   };
 
@@ -136,6 +145,7 @@ const Checkout = () => {
   };
 
   const onConfirmOrder = async () => {
+    if (submitting) return;
     if (!signedIn) {
       router.replace("/sign-in");
       return;
@@ -166,22 +176,33 @@ const Checkout = () => {
     }
 
     setOrderError("");
-    const result = await submitOrder(token, order);
+    setSubmitting(true);
+    try {
+      const result = await submitOrder(token, order);
 
-    if (!result?.status || !result?.data?.id) {
-      const msg =
-        result?.message ||
-        result?.errors?.coupon_code?.[0] ||
-        "حدث خطأ أثناء تقديم الطلب. حاول مجدداً.";
+      if (!result?.status || !result?.data?.id) {
+        const msg =
+          result?.message ||
+          result?.errors?.coupon_code?.[0] ||
+          "حدث خطأ أثناء تقديم الطلب. حاول مجدداً.";
+        setOrderError(msg);
+        return;
+      }
+
+      await deleteStoreById(productType, storeId);
+      haptics.success();
+      router.replace({
+        pathname: "/order-confirmed",
+        params: { id: result.data.id },
+      });
+    } catch (e) {
+      const msg = "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.";
       setOrderError(msg);
-      return;
+      haptics.error();
+      toast.show({ message: msg, kind: "error" });
+    } finally {
+      setSubmitting(false);
     }
-
-    await deleteStoreById(productType, storeId);
-    router.replace({
-      pathname: "/order-confirmed",
-      params: { id: result.data.id },
-    });
   };
 
   return (
@@ -408,10 +429,10 @@ const Checkout = () => {
           ) : null}
 
           <BottomActionBar>
-            <Button onPress={() => onConfirmOrder()}>
+            <Button onPress={() => onConfirmOrder()} disabled={submitting}>
               {(evaProps) => (
                 <Text category="s1" status="control">
-                  تأكيد الطلب
+                  {submitting ? "جاري تقديم الطلب..." : "تأكيد الطلب"}
                 </Text>
               )}
             </Button>

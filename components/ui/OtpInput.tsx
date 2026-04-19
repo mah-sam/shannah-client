@@ -28,6 +28,10 @@ export class OtpInput extends React.Component {
       <TextInput
         ref={this.textInputRef}
         style={[eva.style, style]}
+        autoComplete="one-time-code"
+        textContentType="oneTimeCode"
+        keyboardType="number-pad"
+        importantForAutofill="yes"
         {...restProps}
         onFocus={this.onTextFieldFocus}
         onBlur={this.onTextFieldBlur}

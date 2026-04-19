@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import BottomActionBar from "../components/ui/BottomActionBar";
@@ -23,6 +23,8 @@ export default function ProfileComplete() {
   };
 
   const [errors, setErrors] = useState(initErrors);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
 
   const onProfileUpdate = async () => {
     setIsSubmitting(true);
@@ -70,16 +72,30 @@ export default function ProfileComplete() {
               value={firstName}
               onChangeText={(t) => setFirstName(t)}
               caption={errors.first_name === null ? "" : errors.first_name[0]}
+              returnKeyType="next"
+              onSubmitEditing={() => lastNameRef.current?.focus()}
+              blurOnSubmit={false}
+              autoCapitalize="words"
+              textContentType="givenName"
+              autoComplete="given-name"
             />
             <Input
+              ref={lastNameRef}
               status={errors.last_name === null ? "primary" : "danger"}
               label={() => <Text style={styles.labelText}>اسم العائلة</Text>}
               textStyle={styles.inputText}
               value={lastName}
               onChangeText={(t) => setLastName(t)}
               caption={errors.last_name === null ? "" : errors.last_name[0]}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              blurOnSubmit={false}
+              autoCapitalize="words"
+              textContentType="familyName"
+              autoComplete="family-name"
             />
             <Input
+              ref={emailRef}
               status={errors.email === null ? "primary" : "danger"}
               inputMode="email"
               label={() => (
@@ -90,6 +106,13 @@ export default function ProfileComplete() {
               onChangeText={(t) => setEmail(t)}
               placeholder="email@email.com"
               caption={errors.email === null ? "" : errors.email[0]}
+              returnKeyType="done"
+              onSubmitEditing={() => onProfileUpdate()}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
           </View>
           <BottomActionBar>

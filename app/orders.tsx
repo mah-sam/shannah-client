@@ -2,46 +2,89 @@
 import { Button, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ShannahImage } from "../components/ui/ShannahImage";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
+import { formatSAR } from "../utils/currency";
+import * as haptics from "../utils/haptics";
 import { getOrders, submitReview } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function Orders() {
   const { token } = useAuth();
+  const toast = useToast();
   const [currentOrders, setCurrentOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchOrders = async () => {
+    try {
+      const result = await getOrders(token);
+      const list = result?.data ?? [];
+      setCurrentOrders(
+        list.filter((o) => !["completed", "cancelled"].includes(o.status)),
+      );
+      setPastOrders(
+        list.filter((o) => ["completed", "cancelled"].includes(o.status)),
+      );
+    } catch {
+      toast.show({ message: "تعذّر تحميل الطلبات", kind: "error" });
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     (async () => {
       if (token !== null) {
         setLoading(true);
-        const result = await getOrders(token);
-        const current = result.data.filter(
-          (order) => !["completed", "cancelled"].includes(order.status),
-        );
-        const past = result.data.filter((order) =>
-          ["completed", "cancelled"].includes(order.status),
-        );
-
-        setCurrentOrders(current);
-        setPastOrders(past);
-        setLoading(false);
+        try {
+          const result = await getOrders(token);
+          const list = result?.data ?? [];
+          const current = list.filter(
+            (order) => !["completed", "cancelled"].includes(order.status),
+          );
+          const past = list.filter((order) =>
+            ["completed", "cancelled"].includes(order.status),
+          );
+          setCurrentOrders(current);
+          setPastOrders(past);
+        } catch {
+          toast.show({ message: "تعذّر تحميل الطلبات", kind: "error" });
+        } finally {
+          setLoading(false);
+        }
       }
     })();
   }, [token]);
 
   const handleRating = async (orderId, rating) => {
-    const result = await submitReview(token, orderId, rating);
-    if (result?.status === true) {
-      setPastOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, rating } : o)),
-      );
+    haptics.tapSoft();
+    try {
+      const result = await submitReview(token, orderId, rating);
+      if (result?.status === true) {
+        setPastOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, rating } : o)),
+        );
+        haptics.success();
+        toast.show({ message: "شكراً على تقييمك", kind: "success" });
+      } else {
+        toast.show({
+          message: result?.message || "تعذّر إرسال التقييم",
+          kind: "error",
+        });
+      }
+    } catch {
+      toast.show({ message: "تعذّر إرسال التقييم", kind: "error" });
     }
   };
 
@@ -77,7 +120,16 @@ export default function Orders() {
           )}
 
           {!loading && (currentOrders.length > 0 || pastOrders.length > 0) && (
-          <ScrollView contentContainerStyle={{ gap: 16 }}>
+          <ScrollView
+            contentContainerStyle={{ gap: 16 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme["color-primary-500"]}
+              />
+            }
+          >
             {currentOrders.length > 0 && (
               <View style={styles.ordersContainer}>
                 <Text category="s1">الطلبات الحالية</Text>
@@ -182,7 +234,7 @@ export default function Orders() {
                       <Text>المبلغ الإجمالي</Text>
                       <View style={styles.priceContainer}>
                         <Text category="s2" style={styles.priceText}>
-                          {order.total_amount}
+                          {formatSAR(order.total_amount)}
                         </Text>
                         <SarIcon style={styles.sarIcon}></SarIcon>
                       </View>

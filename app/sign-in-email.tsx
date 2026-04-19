@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { setItemAsync } from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { EyeIcon, EyeOffIcon } from "../components/Icons";
@@ -18,6 +18,7 @@ export default function SignInEmail() {
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   const [emptyInputs, setEmptyInputs] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordRef = useRef(null);
 
   useEffect(() => {
     if (email.trim() === "" || password === "") {
@@ -104,8 +105,17 @@ export default function SignInEmail() {
               value={email}
               onChangeText={(t) => setEmail(t)}
               placeholder="email@email.com"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
             <Input
+              ref={passwordRef}
               status="primary"
               label={() => <Text style={styles.labelText}>كلمة المرور</Text>}
               textStyle={styles.inputText}
@@ -113,6 +123,11 @@ export default function SignInEmail() {
               onChangeText={(t) => setPassword(t)}
               secureTextEntry={secureTextEntry}
               accessoryRight={() => <SecureTextToggle></SecureTextToggle>}
+              returnKeyType="done"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="password"
             />
             <Text
               category="s2"

@@ -41,6 +41,7 @@ export default function Form() {
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [buildingNo, setBuildingNo] = useState("");
   const [streetNo, setStreetNo] = useState("");
+  const streetInputRef = useRef(null);
   const [selectedLabelIndex, setSelectedLabelIndex] = useState(null);
   const [label, setLabel] = useState("");
   const [isLoading, setIsLoading] = useState(action === "edit");
@@ -375,14 +376,20 @@ export default function Form() {
                       caption={
                         errors.building_no === null ? "" : errors.building_no[0]
                       }
+                      returnKeyType="next"
+                      onSubmitEditing={() => streetInputRef.current?.focus()}
+                      blurOnSubmit={false}
+                      keyboardType="default"
                     />
                     <Input
+                      ref={streetInputRef}
                       status={errors.street === null ? "primary" : "danger"}
                       label={() => <Text style={styles.labelText}>الشارع</Text>}
                       textStyle={styles.inputText}
                       value={streetNo}
                       onChangeText={(t) => setStreetNo(t)}
                       caption={errors.street === null ? "" : errors.street[0]}
+                      returnKeyType="done"
                     />
                     <Text style={styles.addressFormLabel}>أضف تسمية</Text>
                     <ScrollView

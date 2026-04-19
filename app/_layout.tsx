@@ -4,10 +4,14 @@ import { ApplicationProvider, IconRegistry } from "@ui-kitten/components";
 import * as Notifications from "expo-notifications";
 import { useFonts } from "expo-font";
 import { router, SplashScreen } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { AssetIconsPack } from "../asset-icons";
 import StackNavigator from "../components/StackNavigator";
+import { OfflineBanner } from "../components/ui/OfflineBanner";
 import { GlobalProvider } from "../context/GlobalContext";
+import { ToastProvider, useToast } from "../context/ToastContext";
+import { setSessionExpiredHandler } from "../services/api";
 import { default as mapping } from "../mapping.json";
 import { default as theme } from "../theme.json";
 
@@ -64,9 +68,34 @@ export default function RootLayout() {
       <IconRegistry icons={[AssetIconsPack]} />
       <ApplicationProvider {...eva} theme={theme} customMapping={mapping}>
         <GlobalProvider>
-          <StackNavigator></StackNavigator>
+          <ToastProvider>
+            <StatusBar style="dark" />
+            <SessionExpiryBridge />
+            <StackNavigator></StackNavigator>
+            <OfflineBanner />
+          </ToastProvider>
         </GlobalProvider>
       </ApplicationProvider>
     </>
   );
+}
+
+/**
+ * Bridges the axios 401 interceptor to the toast/router system so an expired
+ * token flips to sign-in with a user-visible message instead of silently failing.
+ */
+function SessionExpiryBridge() {
+  const { show } = useToast();
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      show({
+        message: "انتهت جلستك، سجّل الدخول مجدداً",
+        kind: "info",
+        duration: 3500,
+      });
+      router.replace("/sign-in");
+    });
+    return () => setSessionExpiredHandler(null);
+  }, [show]);
+  return null;
 }

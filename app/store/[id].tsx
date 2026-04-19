@@ -6,7 +6,7 @@ import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "reac
 import MapView, { Marker } from "react-native-maps";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
-  ArrowRightIcon,
+  ChevronLeft,
   ClockIcon,
   DistanceIcon,
   SarIcon,
@@ -18,6 +18,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { ShannahImage } from "../../components/ui/ShannahImage";
 import { useGlobal } from "../../context/GlobalContext";
 import { useDeliveryReference } from "../../hooks/useDeliveryReference";
+import { formatSAR } from "../../utils/currency";
 import { formatDistanceKm, haversineKm } from "../../utils/distance";
 import { computeEtaRange, formatEtaRange } from "../../utils/eta";
 import useAuth from "../../hooks/useAuth";
@@ -80,10 +81,8 @@ const Store = () => {
                     style={styles.coverImage}
                   />
                   <View style={styles.backButton}>
-                    <Pressable onPress={() => router.back()}>
-                      <ArrowRightIcon
-                        style={styles.arrowRightIcon}
-                      ></ArrowRightIcon>
+                    <Pressable onPress={() => router.back()} hitSlop={10}>
+                      <ChevronLeft style={styles.arrowRightIcon} />
                     </Pressable>
                   </View>
                   {signedIn && (
@@ -121,6 +120,15 @@ const Store = () => {
                       {[store.area, store.city].filter(Boolean).join("، ")}
                     </Text>
                   )}
+                  {store.phone ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(`tel:${store.phone}`)}
+                      hitSlop={6}
+                      style={styles.phoneRow}
+                    >
+                      <Text style={styles.phoneText}>{`اتصل بالمتجر: ${store.phone}`}</Text>
+                    </Pressable>
+                  ) : null}
                   <ScrollView horizontal={true}>
                     <View style={styles.storeInfo}>
                       {distanceLabel ? (
@@ -142,14 +150,14 @@ const Store = () => {
                       <Text style={styles.storeInfoText}>|</Text>
                       <View style={styles.minOrderContainer}>
                         <Text style={styles.storeInfoText}>
-                          {`الحد الأدنى للطلب ${store.min_order_value}`}
+                          {`الحد الأدنى للطلب ${formatSAR(store.min_order_value)}`}
                         </Text>
                         <SarIcon style={styles.sarIcon}></SarIcon>
                       </View>
                       <Text style={styles.storeInfoText}>|</Text>
                       <View style={styles.deliveryFeeContainer}>
                         <Text style={styles.storeInfoText}>
-                          {`التوصيل ${store.delivery_fee}`}
+                          {`التوصيل ${formatSAR(store.delivery_fee)}`}
                         </Text>
                         <SarIcon style={styles.sarIcon}></SarIcon>
                       </View>
@@ -339,6 +347,16 @@ const styles = StyleSheet.create({
     color: theme["text-body-color"],
     textAlign: "left",
     fontSize: 12,
+  },
+  phoneRow: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
+  phoneText: {
+    color: theme["color-primary-500"],
+    fontFamily: "TajawalMedium",
+    fontSize: 13,
+    textAlign: "left",
   },
   outOfRangeBadge: {
     alignSelf: "flex-start",

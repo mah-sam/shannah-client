@@ -20,12 +20,16 @@ import {
   View,
 } from "react-native";
 import { ShannahImage } from "../components/ui/ShannahImage";
+import { useToast } from "../context/ToastContext";
+import * as haptics from "../utils/haptics";
+import { shareProduct } from "../utils/shareProduct";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import {
-  ArrowRightIcon,
+  ChevronLeft,
   MinusCircleIcon,
   PlusCircleIcon,
   SarIcon,
+  ShareIcon,
   StarIcon,
 } from "../components/Icons";
 import { AnimatedFavoriteButton } from "../components/ui/AnimatedFavoriteButton";
@@ -50,11 +54,23 @@ const Product = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const { cartItems, setCartItems } = useGlobal();
   const { keyboardOpen } = useKeyboard();
+  const toast = useToast();
 
   const handleToggleFavorite = async () => {
     if (!token) return;
-    const result = await toggleFavorite(token, "product", productId);
-    setIsFavorite(result.favorited);
+    haptics.tapSoft();
+    try {
+      const result = await toggleFavorite(token, "product", productId);
+      setIsFavorite(result.favorited);
+      toast.show({
+        message: result.favorited
+          ? "تمت الإضافة للمفضلة"
+          : "أُزيل من المفضلة",
+        kind: "success",
+      });
+    } catch {
+      toast.show({ message: "تعذّر تحديث المفضلة", kind: "error" });
+    }
   };
 
   useEffect(() => {
@@ -186,10 +202,16 @@ const Product = () => {
       };
     }
 
-    await AsyncStorage.setItem("cart", JSON.stringify(updatedItems));
+    // Optimistic update: flip state + navigate immediately, persist in the
+    // background. If storage fails we revert and alert the user.
     setCartItems(updatedItems);
-
+    haptics.success();
+    toast.show({ message: "تمت الإضافة للسلة", kind: "success" });
     router.navigate("/(tabs)/cart");
+    AsyncStorage.setItem("cart", JSON.stringify(updatedItems)).catch(() => {
+      setCartItems(cartItems);
+      toast.show({ message: "تعذّر حفظ السلة، حاول مجدداً", kind: "error" });
+    });
   };
 
   return (
@@ -216,8 +238,8 @@ const Product = () => {
                     style={styles.productImage}
                   />
                   <View style={styles.backButton}>
-                    <Pressable onPress={() => router.back()}>
-                      <ArrowRightIcon style={styles.arrowIcon}></ArrowRightIcon>
+                    <Pressable onPress={() => router.back()} hitSlop={10}>
+                      <ChevronLeft style={styles.arrowIcon} />
                     </Pressable>
                   </View>
                   {signedIn && (
@@ -232,6 +254,13 @@ const Product = () => {
                       backgroundColor="rgba(255, 255, 255, 0.9)"
                     />
                   )}
+                  <Pressable
+                    onPress={() => shareProduct(product, store)}
+                    hitSlop={10}
+                    style={styles.shareButton}
+                  >
+                    <ShareIcon style={styles.shareIcon} />
+                  </Pressable>
                 </View>
                 <View style={styles.productDetails}>
                   <View style={styles.productNameAndPrice}>
@@ -492,6 +521,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  shareButton: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    right: 56,
+    top: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: "50%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  shareIcon: { width: 18, height: 18 },
   heartIcon: { width: 24, height: 24 },
   heartFilledIcon: {
     width: 24,

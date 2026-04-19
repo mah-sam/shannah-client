@@ -9,9 +9,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import {
   logout,
   registerPushToken,
@@ -37,6 +38,7 @@ interface GlobalContextValue {
   setDeliveryAddress: (addr: any) => void;
   userLocation: UserLocation | null;
   refreshUserLocation: () => Promise<void>;
+  resumeTick: number;
 }
 
 const GlobalContext = createContext<GlobalContextValue | null>(null);
@@ -53,6 +55,23 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<any>({});
   const [deliveryAddress, setDeliveryAddress] = useState<any>({});
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [resumeTick, setResumeTick] = useState(0);
+  const backgroundedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "background" || next === "inactive") {
+        backgroundedAtRef.current = Date.now();
+      } else if (next === "active") {
+        const bgAt = backgroundedAtRef.current;
+        if (bgAt != null && Date.now() - bgAt > 2 * 60 * 1000) {
+          setResumeTick((t) => t + 1);
+        }
+        backgroundedAtRef.current = null;
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const refreshUserLocation = useCallback(async () => {
     try {
@@ -200,6 +219,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
         setDeliveryAddress,
         userLocation,
         refreshUserLocation,
+        resumeTick,
       }}
     >
       {children}

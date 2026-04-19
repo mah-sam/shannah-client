@@ -2,7 +2,7 @@
 import { Button, Input, Layout, Spinner, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SearchIcon } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -72,7 +72,12 @@ const Search = () => {
               autoFocus={true}
             />
           </View>
-          <View style={styles.searchContainer}>
+          <ScrollView
+            style={styles.searchContainer}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+          <View>
             {loading && (
               <View style={styles.searchLoadingContainer}>
                 <Spinner />
@@ -128,6 +133,7 @@ const Search = () => {
               </View>
             </View>
           </View>
+          </ScrollView>
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>

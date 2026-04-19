@@ -2,7 +2,7 @@
 import { Button, Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { OrderAgainCard, StoresList } from "../../components/HomeComponents";
 import {
@@ -14,6 +14,7 @@ import {
   SearchIcon,
 } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { FilterSheet } from "../../components/ui/FilterSheet";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
@@ -24,7 +25,7 @@ import { haversineKm } from "../../utils/distance";
 import { computeEtaRange, etaMidpoint } from "../../utils/eta";
 
 export default function HomeScreen() {
-  const { signedIn, deliveryAddress } = useGlobal();
+  const { signedIn, deliveryAddress, resumeTick } = useGlobal();
   const { token } = useAuth();
   const [pastOrdersStores, setPastOrdersStores] = useState({
     meal: [],
@@ -38,6 +39,9 @@ export default function HomeScreen() {
   });
   const [productType, setProductType] = useState("meal");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [minRating, setMinRating] = useState(null);
   const [maxDistanceKm, setMaxDistanceKm] = useState(null);
   const [sortBy, setSortBy] = useState("relevance");
@@ -161,14 +165,35 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setLoadError(false);
       try {
         const result = await getStores(token);
-        if (result?.data) setStores(result.data);
+        if (result?.data) {
+          setStores(result.data);
+        } else {
+          setLoadError(true);
+        }
+      } catch {
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, [token, reloadKey, resumeTick]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setLoadError(false);
+    try {
+      const result = await getStores(token);
+      if (result?.data) setStores(result.data);
+      else setLoadError(true);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <SafeAreaInsetsContext.Consumer>
@@ -219,7 +244,15 @@ export default function HomeScreen() {
               </View>
             </Pressable>
           </View>
-          <ScrollView>
+          <ScrollView
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme["color-primary-500"]}
+              />
+            }
+          >
             <View style={styles.tabBarContainer}>
               <View style={styles.tabBar}>
                 <Pressable
@@ -342,7 +375,15 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {!loading && (pastOrdersStores?.[productType]?.length ?? 0) > 0 && (
+            {!loading && loadError && (
+              <ErrorState
+                title="تعذّر تحميل المتاجر"
+                subtitle="تحقق من اتصالك بالإنترنت وحاول مجدداً"
+                onRetry={() => setReloadKey((k) => k + 1)}
+              />
+            )}
+
+            {!loading && !loadError && (pastOrdersStores?.[productType]?.length ?? 0) > 0 && (
               <View style={styles.orderAgainContainer}>
                 <Text category="h3" style={styles.title}>
                   اطلب مرة أخرى
@@ -362,7 +403,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {!loading && displayedStores.length > 0 && (
+            {!loading && !loadError && displayedStores.length > 0 && (
               <View style={styles.storesContainer}>
                 <Text category="h3" style={styles.title}>
                   استكشف المتاجر
@@ -374,7 +415,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {!loading &&
+            {!loading && !loadError &&
               displayedStores.length === 0 &&
               (stores?.[productType]?.length ?? 0) > 0 &&
               filtersActive && (
@@ -397,7 +438,7 @@ export default function HomeScreen() {
                 </View>
               )}
 
-            {!loading &&
+            {!loading && !loadError &&
               displayedStores.length === 0 &&
               (stores?.[productType]?.length ?? 0) === 0 && (
                 <EmptyState

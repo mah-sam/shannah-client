@@ -2,7 +2,8 @@
 import { Icon, Text } from "@ui-kitten/components";
 import { useRouter } from "expo-router";
 import { memo, useCallback } from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
+import { PressableScale } from "./ui/PressableScale";
 import { ShannahImage } from "./ui/ShannahImage";
 import * as theme from "../theme.json";
 
@@ -14,7 +15,7 @@ export const ProductsList = ({ store, items }) => {
   const router = useRouter();
   const ItemsList = memo(({ item }) => {
     return (
-      <Pressable
+      <PressableScale
         onPress={() =>
           router.push({
             pathname: "/product",
@@ -59,7 +60,7 @@ export const ProductsList = ({ store, items }) => {
             </View>
           </View>
         </View>
-      </Pressable>
+      </PressableScale>
     );
   });
 
