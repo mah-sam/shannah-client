@@ -27,6 +27,32 @@ export interface UserLocation {
   longitude: number;
 }
 
+// Allowlist of pathnames that `pendingReturnTo` may legally navigate to
+// after OTP verify. Prevents a malicious deep link or caller from using the
+// return-to mechanism to land the user on an admin/internal surface.
+const RETURN_TO_ALLOWLIST = [
+  "/checkout",
+  "/cart-products",
+  "/addresses",
+  "/product",
+  "/orders",
+  "/favorite",
+];
+
+export function isReturnToAllowed(path: string | null | undefined): boolean {
+  if (!path || typeof path !== "string") return false;
+  if (!path.startsWith("/")) return false;
+  // Must start with exactly one slash (not //), and its pathname prefix
+  // must match one of the allowlisted entries.
+  if (path.startsWith("//")) return false;
+  const pathname = path.split("?")[0].split("#")[0];
+  return RETURN_TO_ALLOWLIST.some(
+    (allowed) => pathname === allowed || pathname.startsWith(allowed + "/"),
+  );
+}
+
+const LAST_USER_ID_KEY = "@shannah:lastUserId";
+
 interface GlobalContextValue {
   cartItems: unknown;
   setCartItems: (items: unknown) => void;
@@ -40,6 +66,17 @@ interface GlobalContextValue {
   userLocation: UserLocation | null;
   refreshUserLocation: () => Promise<void>;
   resumeTick: number;
+  // Intended destination after the next OTP verify (e.g. "/checkout").
+  // Callers set this BEFORE routing an unauthenticated user to sign-in,
+  // then sign-in-mobile consumes + clears it on successful verify.
+  pendingReturnTo: string | null;
+  setPendingReturnTo: (path: string | null) => void;
+  // Reconcile the guest cart with the newly-authenticated user. Call this
+  // from sign-in-mobile right after a successful OTP verify. Compares the
+  // incoming user.id against a persisted "last user id" — if it's a
+  // different account on the same device, wipes cart + delivery address
+  // to prevent cross-account leaks.
+  reconcileAccountBoundaries: (newUserId: string | number) => Promise<void>;
 }
 
 const GlobalContext = createContext<GlobalContextValue | null>(null);
@@ -57,7 +94,47 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   const [deliveryAddress, setDeliveryAddress] = useState<any>({});
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [resumeTick, setResumeTick] = useState(0);
+  const [pendingReturnTo, setPendingReturnTo] = useState<string | null>(null);
   const backgroundedAtRef = useRef<number | null>(null);
+
+  const reconcileAccountBoundaries = useCallback(
+    async (newUserId: string | number) => {
+      const idStr = String(newUserId);
+      let lastUserId: string | null = null;
+      try {
+        lastUserId = await AsyncStorage.getItem(LAST_USER_ID_KEY);
+      } catch {
+        // Treat missing storage as "no prior user" — safest default.
+      }
+
+      // Pure guest → first-ever login: keep the cart; the basket the user
+      // was building pre-auth is still theirs.
+      if (lastUserId === null) {
+        try {
+          await AsyncStorage.setItem(LAST_USER_ID_KEY, idStr);
+        } catch {
+          // Non-critical — cart isolation on next session will just no-op.
+        }
+        return;
+      }
+
+      // Same user returning: no-op.
+      if (lastUserId === idStr) return;
+
+      // Different user on the same device → clear cart + delivery address
+      // so account B never inherits account A's state.
+      setCartItems({ meal: [], banquet: [] });
+      setDeliveryAddress({});
+      try {
+        await AsyncStorage.removeItem("cart");
+        await AsyncStorage.setItem(LAST_USER_ID_KEY, idStr);
+      } catch {
+        // If we can't write storage, the in-memory reset above still holds
+        // for this session.
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
@@ -221,12 +298,21 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
     await deleteItemAsync("token");
     await AsyncStorage.removeItem("user");
+    // Clear lastUserId on explicit sign-out so a guest flow on the next
+    // session is treated as pure-guest (cart preserved, as intended).
+    try {
+      await AsyncStorage.removeItem(LAST_USER_ID_KEY);
+    } catch {
+      // Non-critical
+    }
     realtimeService.disconnect();
     setSignedIn(false);
     setUserData({});
     setCartItems({ meal: [], banquet: [] });
+    setDeliveryAddress({});
+    setPendingReturnTo(null);
 
-    router.navigate("/sign-in");
+    router.navigate("/sign-in-mobile");
   };
 
   return (
@@ -244,6 +330,9 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
         userLocation,
         refreshUserLocation,
         resumeTick,
+        pendingReturnTo,
+        setPendingReturnTo,
+        reconcileAccountBoundaries,
       }}
     >
       {children}

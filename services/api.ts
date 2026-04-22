@@ -64,7 +64,7 @@ api.interceptors.response.use(
         if (onSessionExpired) {
           onSessionExpired();
         } else {
-          router.replace("/sign-in");
+          router.replace("/sign-in-mobile");
         }
         setTimeout(() => {
           sessionExpiredFired = false;
@@ -79,7 +79,7 @@ api.interceptors.response.use(
     if (error.response?.status === 403 && code === "ACCOUNT_SUSPENDED") {
       await deleteItemAsync("token");
       await AsyncStorage.removeItem("user");
-      router.replace("/sign-in");
+      router.replace("/sign-in-mobile");
       Alert.alert("حساب موقوف", "حسابك موقوف. تواصل مع الدعم.");
     }
 

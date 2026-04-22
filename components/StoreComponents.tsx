@@ -37,7 +37,7 @@ export const ProductsList = ({ store, items }) => {
               >
                 {item.name}
               </Text>
-              <Text category="s2" style={styles.productNameAndPriceText}>
+              <Text category="s2" style={styles.productPriceText}>
                 {item.price}
               </Text>
             </View>
@@ -96,6 +96,11 @@ const styles = StyleSheet.create({
   productNameAndPrice: { gap: 2 },
   productNameAndPriceText: {
     color: theme["text-heading-color"],
+    textAlign: "left",
+  },
+  productPriceText: {
+    color: theme["color-primary-500"],
+    fontFamily: "TajawalBold",
     textAlign: "left",
   },
   productDescription: { color: theme["text-body-color"] },

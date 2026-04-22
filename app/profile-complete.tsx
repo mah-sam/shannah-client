@@ -1,19 +1,29 @@
 // @ts-nocheck
-import { Button, Input, Layout, Text } from "@ui-kitten/components";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
+import { deleteItemAsync } from "expo-secure-store";
 import { useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import BottomActionBar from "../components/ui/BottomActionBar";
+import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { useGlobal } from "../context/GlobalContext";
+import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
 import { profileComplete } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function ProfileComplete() {
   const { token } = useAuth();
+  const { setSignedIn, setUserData } = useGlobal();
+  const { show } = useToast();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  // Ref-based guard so a same-tick double-fire (e.g. onSubmitEditing + button
+  // press on the same keystroke) is blocked. State `isSubmitting` drives UI.
+  const submittingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initErrors = {
@@ -27,7 +37,13 @@ export default function ProfileComplete() {
   const emailRef = useRef(null);
 
   const onProfileUpdate = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
+    // Clear prior errors so the user sees a fresh validation pass rather
+    // than a stale mix of old-and-new messages during the loading state.
+    setErrors(initErrors);
+
     let result;
     try {
       result = await profileComplete(token, {
@@ -36,19 +52,46 @@ export default function ProfileComplete() {
         email: email,
       });
     } catch {
+      submittingRef.current = false;
       setIsSubmitting(false);
-      Alert.alert("خطأ", "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.");
+      show({
+        message: "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً",
+        kind: "error",
+      });
       return;
     }
-    setIsSubmitting(false);
 
     if (result?.errors) {
       setErrors({ ...initErrors, ...result.errors });
-    } else if (result?.status) {
-      router.push("/(tabs)");
-    } else if (result?.message) {
-      Alert.alert("خطأ", result.message);
+      submittingRef.current = false;
+      setIsSubmitting(false);
+      return;
     }
+    if (result?.status) {
+      // Hold submittingRef true through navigation so a late re-render
+      // cannot fire a second submit on the already-completed profile.
+      router.replace("/(tabs)");
+      return;
+    }
+    if (result?.message) {
+      show({ message: result.message, kind: "error" });
+    }
+    submittingRef.current = false;
+    setIsSubmitting(false);
+  };
+
+  // User has a valid token but abandoned profile completion. Clear session
+  // and return to the OTP entry — re-signing in is the only coherent path.
+  const onAbandon = async () => {
+    try {
+      await deleteItemAsync("token");
+      await AsyncStorage.removeItem("user");
+    } catch {
+      // ignore storage errors — we still want to sign the user out in UI.
+    }
+    setSignedIn(false);
+    setUserData({});
+    router.replace("/sign-in-mobile");
   };
 
   return (
@@ -61,10 +104,21 @@ export default function ProfileComplete() {
             paddingBottom: insets.bottom,
           }}
         >
+          {/*
+            Not a "back" button — there's no back stack (we arrived via
+            router.replace after OTP verify). This abandons the half-
+            finished account: clears the token, resets context, routes
+            back to OTP entry. Labeled explicitly so the user knows what
+            they're triggering.
+          */}
           <View style={styles.topActionBar}>
-            <Pressable onPress={() => router.replace("/sign-in")}>
+            <Pressable
+              onPress={onAbandon}
+              accessibilityRole="button"
+              accessibilityLabel="استخدام رقم جوال مختلف"
+            >
               <Text status="primary" category="s2">
-                للخلف
+                استخدم رقماً آخر
               </Text>
             </Pressable>
           </View>
@@ -87,6 +141,7 @@ export default function ProfileComplete() {
               autoCapitalize="words"
               textContentType="givenName"
               autoComplete="given-name"
+              disabled={isSubmitting}
             />
             <Input
               ref={lastNameRef}
@@ -102,6 +157,7 @@ export default function ProfileComplete() {
               autoCapitalize="words"
               textContentType="familyName"
               autoComplete="family-name"
+              disabled={isSubmitting}
             />
             <Input
               ref={emailRef}
@@ -122,16 +178,18 @@ export default function ProfileComplete() {
               keyboardType="email-address"
               textContentType="emailAddress"
               autoComplete="email"
+              disabled={isSubmitting}
             />
           </View>
           <BottomActionBar>
-            <Button disabled={isSubmitting} onPress={() => onProfileUpdate()}>
-              <View>
-                <Text category="s1" status="control">
-                  تأكيد
-                </Text>
-              </View>
-            </Button>
+            <PrimaryButton
+              onPress={onProfileUpdate}
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              accessibilityLabel="تأكيد الملف الشخصي"
+            >
+              تأكيد
+            </PrimaryButton>
           </BottomActionBar>
         </Layout>
       )}
@@ -159,6 +217,9 @@ const styles = StyleSheet.create({
     fontFamily: "TajawalBold",
     color: theme["color-heading"],
   },
+  titleContainer: {
+    marginBottom: 8,
+  },
   inputText: {
     color: theme["color-black"],
     fontSize: 16,
@@ -166,9 +227,5 @@ const styles = StyleSheet.create({
   labelText: {
     color: theme["color-black"],
     lineHeight: 18,
-  },
-  eyeIcon: {
-    width: 24,
-    height: 24,
   },
 });

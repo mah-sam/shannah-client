@@ -4,22 +4,24 @@
 > **Base URL:** `/api`
 > **Auth:** Bearer token via Laravel Sanctum
 > **Role:** `client` (middleware: `auth:sanctum`, `not.suspended`, `role:client`, `profile.complete`)
-> **Last updated:** 2026-04-17
+> **Last updated:** 2026-04-22
 
 ---
 
 ## Authentication (Public)
 
+Customer auth is **phone-OTP only** as of 2026-04-22. The sign-in chooser, email login, and email signup screens were removed to match the KSA food-delivery standard (HungerStation/Jahez/Keeta). Email endpoints remain on the backend for admin/operator surfaces but are not wired on this app.
+
 | Feature | Endpoint | Method | Backend Status | App Status | Notes |
 |---------|----------|--------|----------------|------------|-------|
-| Login | `/auth/login` | POST | DONE | CONNECTED | Body: `{ email, password }` |
-| Register | `/auth/register` | POST | DONE | CONNECTED | Returns `{ status, message, next_step: 'verify_email' }` |
+| Login (email) | `/auth/login` | POST | DONE | DECOMMISSIONED | Not wired on client. Admin-only surface. |
+| Register (email) | `/auth/register` | POST | DONE | DECOMMISSIONED | Not wired on client. OTP verify auto-registers new phones. |
+| Email OTP Send | `/auth/email-otp/send` | POST | DONE | DECOMMISSIONED | Not wired on client. |
+| Email OTP Verify | `/auth/email-otp/verify` | POST | DONE | DECOMMISSIONED | Not wired on client. |
 | Send Phone OTP | `/auth/otp/send` | POST | DONE | CONNECTED | 60s cooldown, 5/day limit. Body: `{ phone }` |
-| Verify Phone OTP | `/auth/otp/verify` | POST | DONE | CONNECTED | Returns token + user. Body: `{ phone, otp }` |
+| Verify Phone OTP | `/auth/otp/verify` | POST | DONE | CONNECTED | Returns token + user. Body: `{ phone, otp }`. First-time verify auto-creates user. |
 | Complete Profile | `/auth/profile/complete` | POST | DONE | CONNECTED | Requires Bearer. Body: `{ first_name, last_name, email }` |
-| Email OTP Send | `/auth/email-otp/send` | POST | DONE | CONNECTED | Body: `{ email }` |
-| Email OTP Verify | `/auth/email-otp/verify` | POST | DONE | CONNECTED | Body: `{ email, otp }` |
-| Reset Password | `/auth/reset-password` | POST | DONE | TODO | No UI screen for password reset |
+| Reset Password | `/auth/reset-password` | POST | DONE | LEGACY | `forgot-password.tsx` kept but not linked from live flows. |
 | Logout | `/auth/logout` | POST | DONE | CONNECTED | Called in signOut() before clearing local token |
 
 ## Stores & Products (Public)

@@ -130,7 +130,7 @@ export default function ForgotPassword() {
 
     if (data?.status === true) {
       showToast({ kind: "success", message: "تم تعيين كلمة مرور جديدة" });
-      router.replace("/sign-in-email");
+      router.replace("/sign-in-mobile");
     } else if (data?.errors) {
       setErrors(data.errors);
     } else {

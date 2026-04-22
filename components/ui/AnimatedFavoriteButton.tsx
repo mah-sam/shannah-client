@@ -19,8 +19,24 @@ export const AnimatedFavoriteButton = ({
   const handlePress = async () => {
     if (isAnimating) return;
 
-    // If unfavoriting, just swap the icon without animation
+    // Unfavoriting: small scale-down then spring back while the icon swaps.
+    // Symmetric with the favoriting animation so both states feel tactile.
     if (isFavorite) {
+      setIsAnimating(true);
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.85,
+          duration: 90,
+          useNativeDriver: false,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          mass: 1,
+          stiffness: 280,
+          damping: 14,
+          useNativeDriver: false,
+        }),
+      ]).start(() => setIsAnimating(false));
       Animated.timing(opacityAnim, {
         toValue: 1,
         duration: 0,

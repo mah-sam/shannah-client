@@ -16,12 +16,14 @@ import {
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { FilterSheet } from "../../components/ui/FilterSheet";
+import { SkeletonCard } from "../../components/ui/SkeletonCard";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import { useDeliveryReference } from "../../hooks/useDeliveryReference";
 import { getOrders, getStores } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 import { haversineKm } from "../../utils/distance";
+import * as haptics from "../../utils/haptics";
 import { etaProvider, etaSortKey } from "../../services/eta.service";
 
 export default function HomeScreen() {
@@ -320,7 +322,10 @@ export default function HomeScreen() {
                   styles.filterChip,
                   minRating != null && styles.filterChipActive,
                 ]}
-                onPress={() => setSheetOpen("rating")}
+                onPress={() => {
+                  haptics.tapSoft();
+                  setSheetOpen("rating");
+                }}
               >
                 <View>
                   <Text
@@ -348,7 +353,10 @@ export default function HomeScreen() {
                   styles.filterChip,
                   maxDistanceKm != null && styles.filterChipActive,
                 ]}
-                onPress={() => setSheetOpen("distance")}
+                onPress={() => {
+                  haptics.tapSoft();
+                  setSheetOpen("distance");
+                }}
               >
                 <View>
                   <Text
@@ -364,7 +372,10 @@ export default function HomeScreen() {
                 </View>
               </Button>
               <Pressable
-                onPress={() => setSheetOpen("sort")}
+                onPress={() => {
+                  haptics.tapSoft();
+                  setSheetOpen("sort");
+                }}
                 style={styles.funnelPressable}
               >
                 <FilterFunnelIcon
@@ -379,8 +390,10 @@ export default function HomeScreen() {
             </ScrollView>
 
             {loading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+              <View style={styles.skeletonContainer}>
+                <SkeletonCard variant="store-card" />
+                <SkeletonCard variant="store-card" />
+                <SkeletonCard variant="store-card" />
               </View>
             )}
 
@@ -510,6 +523,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 48,
   },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
   topBar: {
     backgroundColor: theme["color-primary-75"],
     borderBottomLeftRadius: 16,
@@ -551,7 +568,7 @@ const styles = StyleSheet.create({
     color: theme["color-basic-100"],
     textAlignVertical: "bottom",
     lineHeight: 16,
-    textAlign: "left",
+    textAlign: "right",
   },
   heartRoundedIcon: {
     width: 24,
@@ -576,7 +593,7 @@ const styles = StyleSheet.create({
   searchInputPlaceholder: {
     position: "absolute",
     top: 12,
-    left: 44,
+    right: 44,
     fontSize: 16,
     color: theme["text-body-color"],
     zIndex: 1,
@@ -683,6 +700,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "TajawalBold",
     color: theme["color-black"],
-    textAlign: "left",
+    textAlign: "right",
   },
 });

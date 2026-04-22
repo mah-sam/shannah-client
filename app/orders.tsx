@@ -7,6 +7,7 @@ import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SarIcon, StarIcon } from "../components/Icons";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ShannahImage } from "../components/ui/ShannahImage";
+import { SkeletonCard } from "../components/ui/SkeletonCard";
 import { useGlobal } from "../context/GlobalContext";
 import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
@@ -18,11 +19,13 @@ import * as theme from "../theme.json";
 
 export default function Orders() {
   const { token } = useAuth();
-  const { userData } = useGlobal();
+  const { userData, signedIn, setPendingReturnTo } = useGlobal();
   const toast = useToast();
   const [currentOrders, setCurrentOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Start loading=false if user is a guest. Previously `true` caused the
+  // spinner to render forever for unauthenticated users (fetch never fired).
+  const [loading, setLoading] = useState(signedIn);
   const [refreshing, setRefreshing] = useState(false);
 
   const reclassifyOrders = (list) => {
@@ -162,18 +165,35 @@ export default function Orders() {
             paddingBottom: 16 + insets?.bottom,
           }}
         >
-          {loading && (
-            <View style={styles.centerFill}>
-              <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+          {!signedIn && (
+            <EmptyState
+              title="سجّل دخول لعرض طلباتك"
+              subtitle="تتبع طلباتك السابقة والحالية بعد تسجيل الدخول"
+              actionLabel="تسجيل الدخول"
+              onAction={() => {
+                setPendingReturnTo("/orders");
+                router.push("/sign-in-mobile");
+              }}
+            />
+          )}
+
+          {signedIn && loading && (
+            <View style={styles.skeletonContainer}>
+              <SkeletonCard variant="list-row" />
+              <SkeletonCard variant="list-row" />
+              <SkeletonCard variant="list-row" />
             </View>
           )}
 
-          {!loading && currentOrders.length === 0 && pastOrders.length === 0 && (
-            <EmptyState
-              title="لا توجد طلبات"
-              subtitle="طلباتك ستظهر هنا بعد أول عملية شراء"
-            />
-          )}
+          {signedIn &&
+            !loading &&
+            currentOrders.length === 0 &&
+            pastOrders.length === 0 && (
+              <EmptyState
+                title="لا توجد طلبات"
+                subtitle="طلباتك ستظهر هنا بعد أول عملية شراء"
+              />
+            )}
 
           {!loading && (currentOrders.length > 0 || pastOrders.length > 0) && (
           <ScrollView
@@ -435,6 +455,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     color: theme["color-primary-500"],
+    fontFamily: "TajawalBold",
   },
   sarIcon: {
     width: 12,
@@ -465,5 +486,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
 });

@@ -32,6 +32,7 @@ import {
   WalletIcon,
 } from "../components/Icons";
 import BottomActionBar from "../components/ui/BottomActionBar";
+import { PrimaryButton } from "../components/ui/PrimaryButton";
 import { useGlobal } from "../context/GlobalContext";
 import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
@@ -42,9 +43,8 @@ import * as theme from "../theme.json";
 
 const Checkout = () => {
   const { productType, storeId } = useLocalSearchParams();
-  const { signedIn, deliveryAddress } = useGlobal();
+  const { signedIn, deliveryAddress, setPendingReturnTo, cartItems } = useGlobal();
   const { token } = useAuth();
-  const { cartItems } = useGlobal();
   const { subtotal, deleteStoreById } = useCart();
   const [coords, setCoords] = useState(null);
   const [notes, setNotes] = useState("");
@@ -119,6 +119,19 @@ const Checkout = () => {
   const onApplyCoupon = async () => {
     if (!couponCode.trim()) return;
 
+    // Pre-auth gate: guests applying a coupon used to see "network error"
+    // because the request fired with token=null and 401'd. Show the real
+    // reason and guide them into sign-in with returnTo=/checkout.
+    if (!signedIn || !token) {
+      toast.show({
+        message: "سجّل دخول لاستخدام الكوبون",
+        kind: "info",
+      });
+      setPendingReturnTo("/checkout");
+      router.push("/sign-in-mobile");
+      return;
+    }
+
     setCouponLoading(true);
     setCouponError("");
 
@@ -170,7 +183,10 @@ const Checkout = () => {
   const onConfirmOrder = async () => {
     if (submitting) return;
     if (!signedIn) {
-      router.replace("/sign-in");
+      // Stash the checkout destination so post-OTP-verify returns here
+      // with the cart intact, instead of dumping the user on home.
+      setPendingReturnTo("/checkout");
+      router.replace("/sign-in-mobile");
       return;
     }
     const items = [];
@@ -454,7 +470,9 @@ const Checkout = () => {
                 <Text category="s1">الإجمالي</Text>
 
                 <View style={styles.priceContainer}>
-                  <Text category="s1">{totalAmount}</Text>
+                  <Text category="s1" style={{ fontFamily: "TajawalBold" }}>
+                    {totalAmount}
+                  </Text>
                   <SarIcon style={styles.sarIcon}></SarIcon>
                 </View>
               </View>
@@ -472,13 +490,13 @@ const Checkout = () => {
           ) : null}
 
           <BottomActionBar>
-            <Button onPress={() => onConfirmOrder()} disabled={submitting}>
-              {(evaProps) => (
-                <Text category="s1" status="control">
-                  {submitting ? "جاري تقديم الطلب..." : "تأكيد الطلب"}
-                </Text>
-              )}
-            </Button>
+            <PrimaryButton
+              onPress={() => onConfirmOrder()}
+              loading={submitting}
+              accessibilityLabel="تأكيد الطلب"
+            >
+              تأكيد الطلب
+            </PrimaryButton>
           </BottomActionBar>
         </Layout>
       )}

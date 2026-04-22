@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { Image, ImageProps } from "expo-image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as RNImage, StyleSheet, View } from "react-native";
 import {
-  IMAGE_BLURHASHES,
   IMAGE_PLACEHOLDERS,
   IMAGE_TRANSITION_MS,
   ImageVariant,
@@ -34,13 +33,8 @@ const extractUri = (source: ShannahImageProps["source"]): string | null => {
 
 /**
  * Empty-state placeholder: the Shannah monogram tinted to the primary brand
- * color on a pale primary background. The glyph's size, tint and opacity are
- * driven by `IMAGE_PLACEHOLDERS[variant]` so the same component produces a
- * small, bold logo inside a 48-px thumbnail and a subtle, faint logo inside
- * a 400-px cover.
- *
- * The glyph size is computed from the measured container via `onLayout` so
- * the ratio works against whatever height/width the caller applies.
+ * color on a pale primary background. Sized via `onLayout` so the glyph
+ * scales naturally against whatever height/width the caller applies.
  */
 const PlaceholderGlyph = ({ variant, style }: { variant: ImageVariant; style?: any }) => {
   const placeholder = IMAGE_PLACEHOLDERS[variant];
@@ -78,6 +72,22 @@ const PlaceholderGlyph = ({ variant, style }: { variant: ImageVariant; style?: a
   );
 };
 
+/**
+ * Branded remote image with:
+ *   - Clean tinted background shown during load (no blurhash — intentionally
+ *     replaced because the blurhash rendered blocky on certain sizes).
+ *   - Single retry after 1s on first error (covers transient mobile-network
+ *     hiccups). Only after the retry also fails do we fall back to the glyph.
+ *   - Explicit `cachePolicy="memory-disk"` so scroll-off/scroll-back doesn't
+ *     re-download images already fetched this session.
+ *   - Automatic fallback to the branded glyph when source is null or both
+ *     load attempts fail.
+ *
+ * **Caller contract:** the `style` prop must supply explicit width + height
+ * (directly or via flex). The image is positioned with `absoluteFill` inside
+ * a background-tinted container, so a container without dimensions renders
+ * as a zero-sized View and the image is invisible.
+ */
 export const ShannahImage = ({
   variant,
   source,
@@ -87,6 +97,28 @@ export const ShannahImage = ({
 }: ShannahImageProps) => {
   const uri = useMemo(() => extractUri(source), [source]);
   const [errored, setErrored] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset retry/error state whenever the source URI changes — prevents a
+  // stale "errored" from a previous render sticking to a fresh image.
+  useEffect(() => {
+    setErrored(false);
+    setAttempt(0);
+  }, [uri]);
+
+  // Cancel any pending retry setTimeout on unmount so we don't call
+  // setAttempt on a dead component (React warning + potential StrictMode
+  // crash). Also cancel when the URI changes — the reset effect above
+  // supersedes the old retry anyway.
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [uri]);
 
   const shouldShowFallback = !uri || errored;
 
@@ -94,16 +126,35 @@ export const ShannahImage = ({
     return <PlaceholderGlyph variant={variant} style={style} />;
   }
 
+  const placeholder = IMAGE_PLACEHOLDERS[variant];
+
+  const handleError = () => {
+    if (attempt === 0) {
+      // First failure — wait 1s then remount the Image (via `key` bump) so
+      // it refetches. Most transient 4G hiccups resolve on a single retry.
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        setAttempt(1);
+      }, 1000);
+      return;
+    }
+    // Retry also failed — commit to the fallback.
+    setErrored(true);
+  };
+
   return (
-    <Image
-      {...rest}
-      source={{ uri }}
-      style={style}
-      contentFit={contentFit}
-      placeholder={{ blurhash: IMAGE_BLURHASHES[variant] }}
-      transition={IMAGE_TRANSITION_MS}
-      onError={() => setErrored(true)}
-    />
+    <View style={[styles.imageContainer, { backgroundColor: placeholder.background }, style]}>
+      <Image
+        {...rest}
+        key={attempt}
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit={contentFit}
+        cachePolicy="memory-disk"
+        transition={IMAGE_TRANSITION_MS}
+        onError={handleError}
+      />
+    </View>
   );
 };
 
@@ -112,5 +163,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+  imageContainer: {
+    overflow: "hidden",
   },
 });

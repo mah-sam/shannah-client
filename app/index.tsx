@@ -18,7 +18,7 @@ export default function Intro() {
       try {
         const introSeen = await AsyncStorage.getItem("introSeen");
         if (introSeen === "true") {
-          router.replace(signedIn ? "/(tabs)" : "/sign-in");
+          router.replace(signedIn ? "/(tabs)" : "/sign-in-mobile");
         }
       } catch (error) {
         console.log(error);
@@ -52,7 +52,7 @@ export default function Intro() {
     } else {
       try {
         await AsyncStorage.setItem("introSeen", "true");
-        router.replace(signedIn ? "/(tabs)" : "/sign-in");
+        router.replace(signedIn ? "/(tabs)" : "/sign-in-mobile");
       } catch (error) {
         console.log(error);
       }
@@ -62,7 +62,7 @@ export default function Intro() {
   const handleSkip = async () => {
     try {
       await AsyncStorage.setItem("introSeen", "true");
-      router.replace(signedIn ? "/(tabs)" : "/sign-in");
+      router.replace(signedIn ? "/(tabs)" : "/sign-in-mobile");
     } catch (error) {
       console.log(error);
     }

@@ -12,6 +12,7 @@ import { useGlobal } from "../context/GlobalContext";
 import useAuth from "../hooks/useAuth";
 import useCart from "../hooks/useCart";
 import { getStores } from "../services/shannahApi";
+import * as haptics from "../utils/haptics";
 import * as theme from "../theme.json";
 
 const CartProducts = () => {
@@ -53,6 +54,7 @@ const CartProducts = () => {
   };
 
   const onQtyIncrease = (type, sId, productIndex) => {
+    haptics.tapSoft();
     const current = cartItems[type]?.[sId] ?? [];
     const next = current.map((item, i) =>
       i === productIndex ? { ...item, qty: item.qty + 1 } : item,
@@ -61,6 +63,7 @@ const CartProducts = () => {
   };
 
   const onQtyDecrease = (type, sId, productIndex) => {
+    haptics.tapSoft();
     const current = cartItems[type]?.[sId] ?? [];
     const next = current.map((item, i) =>
       i === productIndex
@@ -232,7 +235,10 @@ const CartProducts = () => {
               </Text>
 
               <View style={styles.priceContainer}>
-                <Text category="s1" style={{ color: theme["color-black"] }}>
+                <Text
+                  category="s1"
+                  style={{ color: theme["color-black"], fontFamily: "TajawalBold" }}
+                >
                   {subtotal(productType, storeId)}
                 </Text>
                 <SarIcon style={styles.sarIconSummary}></SarIcon>

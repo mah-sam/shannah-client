@@ -41,7 +41,8 @@ import { getProduct, getStores, toggleFavorite } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 const Product = () => {
-  const { signedIn } = useGlobal();
+  // Consolidated destructure is done below on line 55; keeping a single
+  // call to useGlobal() to avoid duplicate identifiers at bundle time.
   const { token } = useAuth();
   const { storeId, productId } = useLocalSearchParams();
   const [store, setStore] = useState({});
@@ -52,12 +53,23 @@ const Product = () => {
   const [requiredOptions, setRequiredOptions] = useState([]);
   const [options, setOptions] = useState({});
   const [isFavorite, setIsFavorite] = useState(false);
-  const { cartItems, setCartItems } = useGlobal();
+  const { cartItems, setCartItems, signedIn, setPendingReturnTo } = useGlobal();
   const { keyboardOpen } = useKeyboard();
   const toast = useToast();
 
   const handleToggleFavorite = async () => {
-    if (!token) return;
+    if (!signedIn || !token) {
+      // Silent-return used to leave guests confused. Guide them into sign-in
+      // and stash the current screen so they return to the same product
+      // after auth.
+      toast.show({
+        message: "سجّل دخول لحفظ المنتج",
+        kind: "info",
+      });
+      setPendingReturnTo(`/product?id=${productId}&storeId=${storeId}`);
+      router.push("/sign-in-mobile");
+      return;
+    }
     haptics.tapSoft();
     try {
       const result = await toggleFavorite(token, "product", productId);
@@ -614,6 +626,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: theme["text-body-color"],
+    fontFamily: "TajawalBold",
   },
   ltr: {
     direction: "ltr",

@@ -101,7 +101,7 @@ function SessionExpiryBridge() {
         kind: "info",
         duration: 3500,
       });
-      router.replace("/sign-in");
+      router.replace("/sign-in-mobile");
     });
     return () => setSessionExpiredHandler(null);
   }, [show]);

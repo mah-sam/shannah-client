@@ -112,7 +112,10 @@ export default function OrderConfirmed() {
               <View style={styles.orderSummaryRow}>
                 <Text category="s2">المبلغ الإجمالي</Text>
                 <View style={styles.priceContainer}>
-                  <Text category="s2" style={styles.orderSummaryText}>
+                  <Text
+                    category="s2"
+                    style={[styles.orderSummaryText, { color: theme["color-primary-500"] }]}
+                  >
                     {order?.total_amount}
                   </Text>
                   <SarIcon style={styles.sarIcon}></SarIcon>
@@ -199,6 +202,10 @@ const styles = StyleSheet.create({
   },
   etaText: {
     color: theme["text-body-color"],
+  },
+  eta: {
+    color: theme["color-primary-500"],
+    fontFamily: "TajawalBold",
   },
   orderSummaryContainer: {
     gap: 8,

@@ -6,6 +6,7 @@ import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { DistanceIcon, EditIcon } from "../../components/Icons";
 import BottomActionBar from "../../components/ui/BottomActionBar";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useGlobal } from "../../context/GlobalContext";
 import { useToast } from "../../context/ToastContext";
 import useAuth from "../../hooks/useAuth";
@@ -13,7 +14,7 @@ import { getAddresses } from "../../services/shannahApi";
 import * as theme from "../../theme.json";
 
 export default function Select() {
-  const { setDeliveryAddress } = useGlobal();
+  const { setDeliveryAddress, signedIn, setPendingReturnTo } = useGlobal();
   const { token } = useAuth();
   const { show: showToast } = useToast();
   const [addresses, setAddresses] = useState([]);
@@ -51,33 +52,47 @@ export default function Select() {
             paddingBottom: insets?.bottom,
           }}
         >
-          <AddressesList
-            items={addresses}
-            selectedAddressId={selectedAddressId}
-            setSelectedAddressId={setSelectedAddressId}
-          ></AddressesList>
-          <Button
-            appearance="ghost"
-            onPress={() => router.push("/addresses/form")}
-          >
-            <View>
-              <Text category="s1" status="primary">
-                إضافة عنوان جديد
-              </Text>
-            </View>
-          </Button>
-          <BottomActionBar>
-            <Button
-              onPress={() => onConfirmAddress()}
-              disabled={selectedAddressId === null}
-            >
-              <View>
-                <Text category="s1" status="control">
-                  تأكيد العنوان
-                </Text>
-              </View>
-            </Button>
-          </BottomActionBar>
+          {!signedIn ? (
+            <EmptyState
+              title="سجّل دخول لإدارة عناوينك"
+              subtitle="احفظ عناوينك لإرسال طلباتك بشكل أسرع"
+              actionLabel="تسجيل الدخول"
+              onAction={() => {
+                setPendingReturnTo("/addresses/select");
+                router.push("/sign-in-mobile");
+              }}
+            />
+          ) : (
+            <>
+              <AddressesList
+                items={addresses}
+                selectedAddressId={selectedAddressId}
+                setSelectedAddressId={setSelectedAddressId}
+              />
+              <Button
+                appearance="ghost"
+                onPress={() => router.push("/addresses/form")}
+              >
+                <View>
+                  <Text category="s1" status="primary">
+                    إضافة عنوان جديد
+                  </Text>
+                </View>
+              </Button>
+              <BottomActionBar>
+                <Button
+                  onPress={() => onConfirmAddress()}
+                  disabled={selectedAddressId === null}
+                >
+                  <View>
+                    <Text category="s1" status="control">
+                      تأكيد العنوان
+                    </Text>
+                  </View>
+                </Button>
+              </BottomActionBar>
+            </>
+          )}
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>

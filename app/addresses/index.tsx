@@ -136,9 +136,16 @@ const AddressesList = ({ items, onDeletePress }) => {
       <View style={styles.addressCard}>
         <DistanceIcon style={styles.distanceIcon}></DistanceIcon>
         <View style={styles.addressContainer}>
-          <Text category="s1" style={styles.addressLabel}>
-            {item.label}
-          </Text>
+          <View style={styles.addressLabelRow}>
+            <Text category="s1" style={styles.addressLabel}>
+              {item.label}
+            </Text>
+            {item.is_default ? (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>افتراضي</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.addressText} numberOfLines={2}>
             {item.national_address}
           </Text>
@@ -200,6 +207,22 @@ const styles = StyleSheet.create({
   addressLabel: {
     color: theme["text-heading-color"],
     textAlign: "left",
+  },
+  addressLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  defaultBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: theme["color-primary-25"],
+    borderRadius: 10,
+  },
+  defaultBadgeText: {
+    color: theme["color-primary-500"],
+    fontFamily: "TajawalBold",
+    fontSize: 11,
   },
   addressText: {
     color: theme["text-body-color"],

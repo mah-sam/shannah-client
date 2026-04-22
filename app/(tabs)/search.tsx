@@ -2,10 +2,11 @@
 import { Button, Input, Layout, Spinner, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Keyboard, Pressable, ScrollView, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
+import { Keyboard, ScrollView, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { SearchIcon } from "../../components/Icons";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { ShannahImage } from "../../components/ui/ShannahImage";
 import { useToast } from "../../context/ToastContext";
 import { search, searchTags } from "../../services/shannahApi";
@@ -107,7 +108,7 @@ const Search = () => {
             {!loading && searchResult.length > 0 && (
               <View style={styles.searchResultContainer}>
                 {searchResult.map((store) => (
-                  <Pressable
+                  <PressableScale
                     key={store.id}
                     onPress={() => router.navigate(`/store/${store.id}`)}
                   >
@@ -121,7 +122,7 @@ const Search = () => {
                         {store.name}
                       </Text>
                     </View>
-                  </Pressable>
+                  </PressableScale>
                 ))}
               </View>
             )}
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   searchInputPlaceholder: {
     position: "absolute",
     top: 12,
-    left: 60,
+    right: 60,
     fontSize: 16,
     color: theme["text-body-color"],
     zIndex: 1,

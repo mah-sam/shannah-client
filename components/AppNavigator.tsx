@@ -6,7 +6,8 @@ import {
   Text,
 } from "@ui-kitten/components";
 import { Tabs } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import { useGlobal } from "../context/GlobalContext";
 import * as theme from "../theme.json";
@@ -52,6 +53,33 @@ const userIcon = (props) => (
   <Icon {...props} name="user" pack="assets" width={24} height={24} />
 );
 
+// Small scale-pulse on the cart badge when the count increases. The badge
+// rendering is unchanged when count is 0/unchanged — the pulse only runs on
+// positive deltas so opening the app with an existing cart doesn't animate.
+const AnimatedCartBadge = ({ count }: { count: number }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const prev = useRef(count);
+
+  useEffect(() => {
+    if (count > prev.current) {
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.2, duration: 120, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 160, useNativeDriver: true }),
+      ]).start();
+    }
+    prev.current = count;
+  }, [count, scale]);
+
+  if (count <= 0) return null;
+  return (
+    <Animated.View style={[badgeStyles.badge, { transform: [{ scale }] }]}>
+      <Text style={badgeStyles.badgeText}>
+        {count > 9 ? "+٩" : toArabicDigits(count)}
+      </Text>
+    </Animated.View>
+  );
+};
+
 const BottomTabBar = ({ navigation, state }) => {
   const { signedIn, cartItems } = useGlobal();
   const cartCount = cartItemCount(cartItems);
@@ -59,13 +87,7 @@ const BottomTabBar = ({ navigation, state }) => {
   const shoppingBagIconWithBadge = (props: any) => (
     <View style={badgeStyles.iconWrapper}>
       {shoppingBagIcon(props)}
-      {cartCount > 0 ? (
-        <View style={badgeStyles.badge}>
-          <Text style={badgeStyles.badgeText}>
-            {cartCount > 9 ? "+٩" : toArabicDigits(cartCount)}
-          </Text>
-        </View>
-      ) : null}
+      <AnimatedCartBadge count={cartCount} />
     </View>
   );
 

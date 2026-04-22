@@ -43,11 +43,8 @@ assets/           → Fonts, images, icons
 ### Navigation Structure
 ```
 /                    → Splash/entry
-/sign-in             → Sign-in method selector
-/sign-in-mobile      → Phone OTP login
-/sign-in-email       → Email/password login
-/sign-up             → Registration
-/profile-complete    → Complete profile after signup
+/sign-in-mobile      → Phone OTP login (the only public auth surface)
+/profile-complete    → Complete profile after first-time OTP verification
 /(tabs)/index        → Home feed (stores, categories)
 /(tabs)/search       → Search stores/products
 /(tabs)/cart         → Shopping cart

@@ -9,6 +9,7 @@ import AlertDialog from "../../components/ui/AlertDialog";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { ShannahImage } from "../../components/ui/ShannahImage";
+import { SkeletonCard } from "../../components/ui/SkeletonCard";
 import { useGlobal } from "../../context/GlobalContext";
 import useAuth from "../../hooks/useAuth";
 import useCart from "../../hooks/useCart";
@@ -67,8 +68,9 @@ const Cart = () => {
       {(insets) => (
         <Layout style={styles.container}>
           {loading && (
-            <View style={styles.centerFill}>
-              <ActivityIndicator size="large" color={theme["color-primary-500"]} />
+            <View style={styles.skeletonContainer}>
+              <SkeletonCard variant="list-row" />
+              <SkeletonCard variant="list-row" />
             </View>
           )}
 
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
-  priceText: { color: theme["color-primary-500"] },
+  priceText: { color: theme["color-primary-500"], fontFamily: "TajawalBold" },
   salePriceContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -284,6 +286,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
 });
 
