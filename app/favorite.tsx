@@ -198,8 +198,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: 36,
     height: 36,
-    borderRadius: 4,
-    backgroundColor: "#E5E7EB",
+    borderRadius: 8,
   },
   productDetails: {
     justifyContent: "space-between",

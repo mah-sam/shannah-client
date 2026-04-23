@@ -230,8 +230,7 @@ const styles = StyleSheet.create({
   storeLogo: {
     width: 36,
     height: 36,
-    borderRadius: 4,
-    backgroundColor: theme["color-primary-50"],
+    borderRadius: 8,
   },
   storeInfo: { justifyContent: "space-between" },
   storeName: { color: theme["text-heading-color"], textAlign: "left" },
@@ -245,8 +244,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: 36,
     height: 36,
-    borderRadius: 4,
-    backgroundColor: theme["color-primary-50"],
+    borderRadius: 8,
   },
   plusCircleIcon: { width: 20, height: 20, tintColor: theme["color-black"] },
   priceAndDiscountContainer: {

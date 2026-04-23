@@ -4,20 +4,22 @@ import { Input, Layout, Text } from "@ui-kitten/components";
 import { router } from "expo-router";
 import { deleteItemAsync } from "expo-secure-store";
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaInsetsContext } from "react-native-safe-area-context";
 import BottomActionBar from "../components/ui/BottomActionBar";
 import { PrimaryButton } from "../components/ui/PrimaryButton";
-import { useGlobal } from "../context/GlobalContext";
+import { isReturnToAllowed, useGlobal } from "../context/GlobalContext";
 import { useToast } from "../context/ToastContext";
 import useAuth from "../hooks/useAuth";
+import useKeyboard from "../hooks/useKeyboard";
 import { profileComplete } from "../services/shannahApi";
 import * as theme from "../theme.json";
 
 export default function ProfileComplete() {
   const { token } = useAuth();
-  const { setSignedIn, setUserData } = useGlobal();
+  const { setSignedIn, setUserData, pendingReturnTo, setPendingReturnTo } = useGlobal();
   const { show } = useToast();
+  const { keyboardOpen } = useKeyboard();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,7 +72,16 @@ export default function ProfileComplete() {
     if (result?.status) {
       // Hold submittingRef true through navigation so a late re-render
       // cannot fire a second submit on the already-completed profile.
-      router.replace("/(tabs)");
+      // First-time guests started at /checkout (or other gated screen);
+      // honor pendingReturnTo so they land back where they were instead
+      // of getting dumped on home with their cart "abandoned".
+      const returnTarget = pendingReturnTo;
+      setPendingReturnTo(null);
+      if (returnTarget && isReturnToAllowed(returnTarget)) {
+        router.replace(returnTarget as any);
+      } else {
+        router.replace("/(tabs)");
+      }
       return;
     }
     if (result?.message) {
@@ -89,6 +100,9 @@ export default function ProfileComplete() {
     } catch {
       // ignore storage errors — we still want to sign the user out in UI.
     }
+    // Discard any stashed returnTo so a later, unrelated sign-in doesn't
+    // teleport the next user to e.g. /checkout from a stale guest intent.
+    setPendingReturnTo(null);
     setSignedIn(false);
     setUserData({});
     router.replace("/sign-in-mobile");
@@ -104,6 +118,11 @@ export default function ProfileComplete() {
             paddingBottom: insets.bottom,
           }}
         >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            enabled={keyboardOpen}
+          >
           {/*
             Not a "back" button — there's no back stack (we arrived via
             router.replace after OTP verify). This abandons the half-
@@ -191,6 +210,7 @@ export default function ProfileComplete() {
               تأكيد
             </PrimaryButton>
           </BottomActionBar>
+          </KeyboardAvoidingView>
         </Layout>
       )}
     </SafeAreaInsetsContext.Consumer>
@@ -215,7 +235,7 @@ const styles = StyleSheet.create({
   title: {
     textAlign: "center",
     fontFamily: "TajawalBold",
-    color: theme["color-heading"],
+    color: theme["text-heading-color"],
   },
   titleContainer: {
     marginBottom: 8,

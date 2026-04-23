@@ -63,7 +63,7 @@ export function SkeletonCard({ variant = "list-row", style }: SkeletonCardProps)
   );
 }
 
-const TINT = theme["color-primary-100"] ?? "#F4D1FC";
+const TINT = theme["color-primary-100"] ?? "#F5E3FC";
 
 const styles = StyleSheet.create({
   // store-card — matches the home-screen store card footprint (cover + 2 text lines)

@@ -308,7 +308,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#E5E7EB",
   },
   productNameAndQtyContainer: { flex: 1, gap: 8 },
   productName: { color: theme["text-heading-color"], textAlign: "left" },

@@ -417,8 +417,7 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: 36,
     height: 36,
-    borderRadius: 4,
-    backgroundColor: theme["color-primary-50"],
+    borderRadius: 8,
   },
   orderNumber: {
     color: theme["text-body-color"],

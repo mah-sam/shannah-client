@@ -49,7 +49,13 @@ export function PrimaryButton({
         {loading ? (
           <Spinner status="control" size="small" />
         ) : (
-          <Text category="s1" status="control" style={styles.label}>
+          <Text
+            category="s1"
+            status="control"
+            style={styles.label}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {children}
           </Text>
         )}
@@ -78,5 +84,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: "TajawalBold",
+    textAlign: "center",
   },
 });

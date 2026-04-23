@@ -52,6 +52,10 @@ export default function SignInMobile() {
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  // Bumped on every successful OTP issue (initial send + each resend) so
+  // the countdown effect re-fires. Using `otpSent` alone would only trigger
+  // the first time — resends keep otpSent=true and the effect would skip.
+  const [resendNonce, setResendNonce] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { keyboardOpen } = useKeyboard();
 
@@ -65,15 +69,15 @@ export default function SignInMobile() {
   );
 
   // Kick the resend countdown every time a fresh OTP is issued (initial send
-  // or explicit resend). Cleared on unmount.
+  // or explicit resend). Triggered by resendNonce — see its declaration.
   useEffect(() => {
-    if (!otpSent) return;
+    if (resendNonce === 0) return;
     setResendCountdown(RESEND_COUNTDOWN_SECONDS);
     const interval = setInterval(() => {
       setResendCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [otpSent]);
+  }, [resendNonce]);
 
   // Soft fade-in when switching between phone entry ↔ OTP entry.
   useEffect(() => {
@@ -118,6 +122,10 @@ export default function SignInMobile() {
         // don't carry over into the new challenge.
         setOtpDigits(Array(OTP_LENGTH).fill(""));
         setOtpError(false);
+        // Restart the resend countdown — must bump every successful send,
+        // not just the first, otherwise the resend link stays available
+        // forever after the first issue.
+        setResendNonce((n) => n + 1);
       } else {
         show({
           message: data?.message || "فشل في إرسال الرمز",
@@ -187,10 +195,9 @@ export default function SignInMobile() {
     setSignedIn(true);
     setUserData(data.user);
 
-    // Profile incomplete always goes through profile-complete first; the
-    // pendingReturnTo is preserved across that step by profile-complete's
-    // router.replace("/(tabs)") — acceptable for v1 (a future pass could
-    // forward returnTo through profile-complete too).
+    // Profile incomplete always goes through profile-complete first.
+    // pendingReturnTo is forwarded intact — profile-complete consumes it
+    // on successful profile submit via the same allowlist used below.
     if (data.next_step === "complete_profile") {
       router.replace("/profile-complete");
       return;
@@ -443,7 +450,13 @@ export default function SignInMobile() {
               </Text>
 
               <PressableScale
-                onPress={() => router.replace("/(tabs)/")}
+                onPress={() => {
+                  // Bailing out of sign-in — discard any stashed returnTo so
+                  // it can't fire on a later, unrelated sign-in (e.g. user
+                  // re-opens auth and gets teleported to a stale /checkout).
+                  setPendingReturnTo(null);
+                  router.replace("/(tabs)/");
+                }}
                 disabled={submitting}
                 style={styles.guestButton}
                 accessibilityRole="button"
@@ -468,8 +481,12 @@ const styles = StyleSheet.create({
   },
   topActionBar: {
     flexDirection: "row",
+    alignItems: "center",
     marginTop: 16,
     marginBottom: 8,
+    // Fixed height so the rest of the screen doesn't shift when we
+    // arrived via router.replace (no back available, button hidden).
+    minHeight: 24,
   },
   logoContainer: {
     alignItems: "center",
@@ -487,7 +504,7 @@ const styles = StyleSheet.create({
   title: {
     textAlign: "center",
     fontFamily: "TajawalBold",
-    color: theme["color-heading"],
+    color: theme["text-heading-color"],
   },
   subTitle: {
     textAlign: "center",
@@ -550,7 +567,7 @@ const styles = StyleSheet.create({
   phoneBadge: {
     fontFamily: "TajawalBold",
     writingDirection: "ltr",
-    color: theme["color-heading"],
+    color: theme["text-heading-color"],
   },
   guestButton: {
     alignItems: "center",

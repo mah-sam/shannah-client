@@ -70,6 +70,14 @@ const Checkout = () => {
 
   useFocusEffect(
     useCallback(() => {
+      // Auth must be checked first — guests have no address either, so the
+      // address-missing branch below would shunt them to /addresses/select
+      // and they'd never see the proper sign-in prompt with returnTo=/checkout.
+      if (!signedIn) {
+        setPendingReturnTo("/checkout");
+        router.replace("/sign-in-mobile");
+        return;
+      }
       // Backend renamed lat/lng → latitude/longitude. Prefer the new keys,
       // fall back to legacy ones during the rollout.
       const addrLat = deliveryAddress?.latitude ?? deliveryAddress?.lat;
@@ -103,7 +111,7 @@ const Checkout = () => {
         }
       };
       fetchFees();
-    }, [deliveryAddress, storeId]),
+    }, [deliveryAddress, storeId, signedIn, setPendingReturnTo]),
   );
 
   // Inclusive-VAT math (ZATCA). Prices in the cart are gross; the VAT line

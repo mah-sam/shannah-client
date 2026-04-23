@@ -205,8 +205,7 @@ const styles = StyleSheet.create({
   searchResultImage: {
     width: 36,
     height: 36,
-    backgroundColor: theme["color-primary-50"],
-    borderRadius: 4,
+    borderRadius: 8,
   },
   searchResultText: {
     color: theme["text-heading-color"],

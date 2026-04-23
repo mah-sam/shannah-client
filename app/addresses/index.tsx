@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   defaultBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: theme["color-primary-25"],
+    backgroundColor: theme["color-primary-100"],
     borderRadius: 10,
   },
   defaultBadgeText: {

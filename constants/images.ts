@@ -39,7 +39,7 @@ export interface PlaceholderStyle {
   glyphOpacity: number;
 }
 
-// All backgrounds use color-primary-100 (#F4D1FC, palest brand tint) so the
+// All backgrounds use color-primary-100 (#F5E3FC, brand pale wash) so the
 // primary-500 glyph reads cleanly at any size. We vary ratio + opacity per
 // variant to compensate for container size: small containers need larger
 // relative glyphs and more opacity so the logo is visible; wide containers
